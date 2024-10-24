@@ -1,3 +1,7 @@
+// Build a double GGEM in ROOT geometry and store as GDML file.
+// single hole to single hole assumption.
+// could be 0.8 mm diameter twice or 1.2 mm on second plate
+//
 #include <iostream>
 // ROOT items
 #include "TGeoManager.h"
@@ -5,6 +9,7 @@
 #include "TGeoMedium.h"
 #include "TGeoBBox.h"
 #include "TGeoTube.h"
+#include "TGeoTorus.h"
 #include "TGeoVolume.h"
 #include "TGeoCompositeShape.h"
 #include "TString.h"
@@ -12,18 +17,19 @@
 #include "TMath.h"
 
 int main() {
-  void MGEM15mm();
+  void DGGEM08mm();
 
   // simply call geometry function
-  MGEM15mm();
-  return 1;
+  DGGEM08mm();
+  return 0;
 }
 
 
-void MGEM15mm()
+void DGGEM08mm()
 {
-  TGeoManager* geom = new TGeoManager("mgemtest","MGEM geometry");
+  TGeoManager* geom = new TGeoManager("ggemtest","GGEM geometry");
 
+  // Materials irrelevant but required for GDML file
   TGeoMaterial* mat = new TGeoMaterial("Vacuum",0,0,1.e-20);
   TGeoMaterial* air = new TGeoMaterial("Ar",40,18,1.e-20);
   TGeoMaterial *matAl = new TGeoMaterial("Al",26,13,2.7);
@@ -34,13 +40,14 @@ void MGEM15mm()
 
   // units [cm]
   // note hard-coded names for volumes required
-  double worldhalf = 5.0; // 1cm
-  double halfside = 1.0; // 1cm
-  double halfheight = 0.005; // 50mum
-  double radius = 0.05; // 0.5mm
-  double shift = 0.08; // 0.8mm
-  double diag = 0.141; // sqrt(2)mm
-
+  double worldhalf = 2.0; // [cm]
+  double halfside = 0.5; // [cm]
+  double halfheight = 0.01; // height=200mum plate thickness
+  double radius = 0.04; // r=0.4 mm
+  double circlerad = 0.01; // 100 mum
+  double shift = 0.025; // 0.5 mm plate distance
+  double halftransfer = 0.06; // 1.2 mm transfer gap
+  
   // make shape components
   TGeoBBox *sbox  = new TGeoBBox("P",halfside,halfside,halfheight);
   TGeoTube *stub  = new TGeoTube("H",0,radius,halfheight);
@@ -52,18 +59,8 @@ void MGEM15mm()
   TGeoRotation* ident = new TGeoRotation("id",0,0,0); // nothing
   ident->RegisterYourself();
 
-  TGeoTranslation* mv1 = new TGeoTranslation("mv1",diag,diag,0.0);
-  mv1->RegisterYourself();
-  TGeoTranslation* mv2 = new TGeoTranslation("mv2",diag,-diag,0.0);
-  mv2->RegisterYourself();
-  TGeoTranslation* mv3 = new TGeoTranslation("mv3",-diag,diag,0.0);
-  mv3->RegisterYourself();
-  TGeoTranslation* mv4 = new TGeoTranslation("mv4",-diag,-diag,0.0);
-  mv4->RegisterYourself();
-
-  // create a composite plate with 5 holes
   TGeoCompositeShape *cs = new TGeoCompositeShape("cs",
-						  "(P-H:id-H:mv1-H:mv2-H:mv3-H:mv4)");
+						  "(P-H:id)");
   TGeoVolume *plate = new TGeoVolume("Plate",cs,al);
 
 
@@ -72,8 +69,10 @@ void MGEM15mm()
   // plate volume shifted
   world->AddNode(comsol,1);
 
-  comsol->AddNode(plate,1,new TGeoTranslation(0.0,0.0,shift));
-  comsol->AddNode(plate,2,new TGeoTranslation(0.0,0.0,-shift));
+  comsol->AddNode(plate,1,new TGeoTranslation(0.0,0.0,2*shift+2*halfheight+halftransfer));
+  comsol->AddNode(plate,2,new TGeoTranslation(0.0,0.0,halfheight+halftransfer));
+  comsol->AddNode(plate,3,new TGeoTranslation(0.0,0.0,-halfheight-halftransfer));
+  comsol->AddNode(plate,4,new TGeoTranslation(0.0,0.0,-2*shift-2*halfheight-halftransfer));
 
   world->SetLineColor(1);
   comsol->SetLineColor(1);
@@ -83,9 +82,10 @@ void MGEM15mm()
   geom->CloseGeometry();
   // *** GEOMETRY closed ***
 
-  geom->Export("MGEMgeometry.gdml");
-
-  //  world->Draw();
+  //  geom->Export("DGGEM_08_12.gdml");
+  geom->SetVisLevel(4);
+  geom->SetVisOption(0);
+  world->Draw();
 
 }
 

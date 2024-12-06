@@ -1,6 +1,5 @@
 // Build a double GGEM in ROOT geometry and store as GDML file.
-// single hole to single hole assumption.
-// could be 0.8 mm diameter twice or 1.2 mm on second plate
+
 //
 #include <iostream>
 // ROOT items
@@ -40,28 +39,36 @@ void DGGEM08mm()
 
   // units [cm]
   // note hard-coded names for volumes required
-  double worldhalf = 2.0; // [cm]
-  double halfside = 0.5; // [cm]
-  double halfheight = 0.01; // height=200mum plate thickness
+  double worldhalfw = 3.0; // [cm] COMSOL Chamber
+  double worldhalfz = 2.0; // [cm]
+  double halfside = 0.74; // 14.8 [mm] plate from COMSOL
+  double halfheight = 0.01; // height=0.2mm plate thickness
   double radius = 0.04; // r=0.4 mm
-  double circlerad = 0.01; // 100 mum
+  double pitch = 0.16; // 1.6 mm hole centre distance
   double shift = 0.025; // 0.5 mm plate distance
   double halftransfer = 0.06; // 1.2 mm transfer gap
   
   // make shape components
+  // plate
   TGeoBBox *sbox  = new TGeoBBox("P",halfside,halfside,halfheight);
+  // hole
   TGeoTube *stub  = new TGeoTube("H",0,radius,halfheight);
 
 
-  TGeoVolume* world = geom->MakeBox("World",med,worldhalf+0.1,worldhalf+0.1,worldhalf+0.1); // larger than rest
-  TGeoVolume* comsol = geom->MakeBox("Comsol",airmed,worldhalf,worldhalf,worldhalf); // field volume
+  TGeoVolume* world = geom->MakeBox("World",med,worldhalfw+0.1,worldhalfw+0.1,worldhalfz+0.1); // larger than rest
+  TGeoVolume* comsol = geom->MakeBox("Comsol",airmed,worldhalfw,worldhalfw,worldhalfz); // field volume
 
+  TGeoTranslation* left = new TGeoTranslation("left",-pitch,0,0); // nothing
+  left->RegisterYourself();
+  TGeoTranslation* right = new TGeoTranslation("right",pitch,0,0); // nothing
+  right->RegisterYourself();
   TGeoRotation* ident = new TGeoRotation("id",0,0,0); // nothing
   ident->RegisterYourself();
 
   TGeoCompositeShape *cs = new TGeoCompositeShape("cs",
-						  "(P-H:id)");
+						  "(P-H:id-H:left-H:right)");
   TGeoVolume *plate = new TGeoVolume("Plate",cs,al);
+  TGeoVolume *anode = new TGeoVolume("Anode",sbox,al);
 
 
   geom->SetTopVolume(world);
@@ -69,10 +76,10 @@ void DGGEM08mm()
   // plate volume shifted
   world->AddNode(comsol,1);
 
-  comsol->AddNode(plate,1,new TGeoTranslation(0.0,0.0,2*shift+2*halfheight+halftransfer));
+  comsol->AddNode(plate,1,new TGeoTranslation(0.0,0.0,2*(halfheight+halftransfer)));
   comsol->AddNode(plate,2,new TGeoTranslation(0.0,0.0,halfheight+halftransfer));
   comsol->AddNode(plate,3,new TGeoTranslation(0.0,0.0,-halfheight-halftransfer));
-  comsol->AddNode(plate,4,new TGeoTranslation(0.0,0.0,-2*shift-2*halfheight-halftransfer));
+  comsol->AddNode(anode,0,new TGeoTranslation(0.0,0.0,-2*(halfheight+halftransfer)));
 
   world->SetLineColor(1);
   comsol->SetLineColor(1);
@@ -82,10 +89,10 @@ void DGGEM08mm()
   geom->CloseGeometry();
   // *** GEOMETRY closed ***
 
-  //  geom->Export("DGGEM_08_12.gdml");
-  geom->SetVisLevel(4);
-  geom->SetVisOption(0);
-  world->Draw();
+  geom->Export("DGGEM_5_2_5.gdml");
+  //  geom->SetVisLevel(4);
+  //  geom->SetVisOption(0);
+  //  world->Draw();
 
 }
 

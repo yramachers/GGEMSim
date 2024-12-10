@@ -27,20 +27,20 @@ int main(int argc, char** argv) {
   // command line interface
   CLI::App app{"thgem signal calculator"};
   int    seed = 1234;
-  double en = 1.0;
-  double bias = 400.0;
-  double xs = 0.055;
-  double ys = 0.0;
-  double zs = 0.087;
+  double en = 1.0; // [eV]
+  double bias = 400.0; // [V]
+  double xs = 0.045; // [cm]
+  double ys = 0.0;  // [cm]
+  double zs = 0.151; // [cm]
   std::vector<std::string> names;
   std::vector<double> config;
   std::string outputFileName = "avalanche.root";
   std::string gdmlName = "DGGEM_5_2_5.gdml";
   std::string fieldName = "2DGGEM_5_2_5-1V.root";
   
-  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.055");
+  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.045");
   app.add_option("-y,--ystart", zs, "<y start position [cm]> Default: 0.0");
-  app.add_option("-z,--zstart", xs, "<z start position [cm]> Default: 0.087");
+  app.add_option("-z,--zstart", xs, "<z start position [cm]> Default: 0.151");
   app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 400.0");
   app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 1.0");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 1234");

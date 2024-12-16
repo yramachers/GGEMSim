@@ -46,9 +46,9 @@ int Transport::transport(double energy, Electrode* electrode, std::list<charge_t
     charges.push_front(cc); // insert from front
   }
   //  if (!charges.empty()) { // don't run on empty charges
-  std::cout << "Transport: number of charges in box: " << charges.size() << std::endl;
+  //  std::cout << "Transport: number of charges in box: " << charges.size() << std::endl;
   int counter = 0;
-  while (!run(electrode, energy) && counter<1000) { // runs first charge
+  while (!run(electrode, energy) && counter<10) { // runs first charge
   // next attempt with initial charge
     charges.clear();
     for (charge_t cc : q) {
@@ -149,12 +149,12 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       }
       else { // produce an electron
       	cc.location = point; // last known collision location
-	      cc.chargeID = 1; // was an electron
-	      cc.charge = -1; //
-	      book_charge(cc); // store in object container
-	      ion_counter++;
-// 	std::cout << "inelastic collision electron booked at energy " << energy << std::endl;
-// 	std::cout << "last field values " << exyz.xc() << " "<< exyz.yc() << " " << exyz.zc() << std::endl;
+	cc.chargeID = 1; // was an electron
+	cc.charge = -1; //
+	book_charge(cc); // store in object container
+	ion_counter++;
+	std::cout << "inelastic collision electron booked at energy " << energy << std::endl;
+	std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
       }
     }
     else if (inel_flag<0) { // was excitation
@@ -165,8 +165,8 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       cc.charge = -1; //
       book_photon(cc); // store in object container
       photon_counter++; // count photons
-//       std::cout << "inelastic collision photon booked at energy " << energy << std::endl;
-//       std::cout << "last field values " << exyz.xc() << " "<< exyz.yc() << " " << exyz.zc() << std::endl;
+      std::cout << "inelastic collision photon booked at energy " << energy << std::endl;
+      std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
     }
     
     if (kv>=kmax) {
@@ -184,20 +184,18 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       distance_step = d_update(speed,running_time);
       distance_sum += distance_step; // in [m]
       point.SetXYZ(distance_sum.X()*100.0,distance_sum.Y()*100.0,distance_sum.Z()*100.0); // [cm]
-//       if (point.zc() < -0.085)  // particle out of hole 1.6mm in z
-// 	analytic = 1; // Stop
 
       // new speed from elastic collision kinematics
       speed = kin_factor2(speed,momentum_flag);
       
       // check geometry and fields
       exyz = electrode->getFieldValue(analytic,point);
-      //     std::cout << "analytic bool " << analytic << std::endl;
-      //     std::cout << "in transport: x,z field values " << exyz.xc() << " " << exyz.zc() << std::endl;
-      //     std::cout << "in transport: x,z coordinates " << point.xc() << " " << point.zc() << std::endl;
-//      std::cout << "collision at energy " << energy << std::endl;
-//      std::cout << "speed X: " << speed.X() << " Z: " << speed.Z() << std::endl;
-//      std::cout << "time between coll " << running_time << std::endl;
+      // std::cout << "analytic bool " << analytic << std::endl;
+      // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+      // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
+      //      std::cout << "collision at energy " << energy << std::endl;
+      //      std::cout << "speed X: " << speed.X() << " Z: " << speed.Z() << std::endl;
+      //      std::cout << "time between coll " << running_time << std::endl;
 
       // reset system
       running_time = 0.0;
@@ -227,7 +225,7 @@ bool Transport::run(Electrode* electrode, double en) {
   int counter = 0;
 
   while (!charges.empty()) { // stop when refilling stopped
-    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
+    //    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
 
     // empty charges and store tasks in blocks of nthreads
     for (int n=0;n<nthreads && !charges.empty();n++) { // drain charges basket

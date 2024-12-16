@@ -27,9 +27,9 @@ int main(int argc, char** argv) {
   // command line interface
   CLI::App app{"thgem signal calculator"};
   int    seed = 1234;
-  double en = 1.0; // [eV]
-  double bias = 400.0; // [V]
-  double xs = 0.045; // [cm]
+  double en = 0.2; // [eV]
+  double bias = 600.0; // [V]
+  double xs = 0.06; // [cm]
   double ys = 0.0;  // [cm]
   double zs = 0.151; // [cm]
   std::vector<std::string> names;

@@ -72,6 +72,9 @@ int GeometryModel::whereami(double xv, double yv, double zv) {
   else if (region.Contains("Plate")) {
     return -1; // stop
   }
+  else if (region.Contains("Anode")) {
+    return -1; // stop
+  }
   else if (region.Contains("World")) {
     return -1; // out, stop transport
   }

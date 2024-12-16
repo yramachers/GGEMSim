@@ -227,7 +227,7 @@ bool Transport::run(Electrode* electrode, double en) {
   int counter = 0;
 
   while (!charges.empty()) { // stop when refilling stopped
-//    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
+    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
 
     // empty charges and store tasks in blocks of nthreads
     for (int n=0;n<nthreads && !charges.empty();n++) { // drain charges basket

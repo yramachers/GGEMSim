@@ -38,11 +38,11 @@ int main(int argc, char** argv) {
   std::string gdmlName = "DGGEM_5_2_5.gdml";
   std::string fieldName = "2DGGEM_5_2_5-1V.root";
   
-  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.045");
+  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.06");
   app.add_option("-y,--ystart", zs, "<y start position [cm]> Default: 0.0");
   app.add_option("-z,--zstart", xs, "<z start position [cm]> Default: 0.151");
-  app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 400.0");
-  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 1.0");
+  app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
+  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.2");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 1234");
   app.add_option("-o,--outfile", outputFileName, "<output file name> Default: avalanche.root");
   app.add_option("-g,--gdmlfile", gdmlName, "<gdml file name> Default: DGGEM_5_2_5.gdml");
@@ -87,12 +87,12 @@ void signal_calculation(int seed, const XYZPoint& loc, const std::vector<double>
 
   //----------------------------------------------------------
   // Geometry
-  GeometryModel* gmodel = new GeometryModel(names.at(1).c_str());
+  GeometryModel* gmodel = new GeometryModel(names.at(1));
 
   //----------------------------------------------------------
   // FEM fields from file
   // hard-coded field map files
-  ComsolFields* fem = new ComsolFields(names.at(2).c_str());
+  ComsolFields* fem = new ComsolFields(names.at(2));
   fem->setBias(conf.at(1));
 
   //----------------------------------------------------------

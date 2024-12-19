@@ -3,6 +3,7 @@
 
 #include <list>
 #include <vector>
+#include <array>
 #include <mutex>
 
 // ROOT
@@ -55,14 +56,14 @@ class Transport {
   double inelastic_cs(double energy);
   double inelastic_cs_mason_newell(double energy);
   double emp_fit(double x, double* par);
-  double* calc_phaseshift1to6(double energy);
+  std::array<double,6> calc_phaseshift1to6(double energy);
   XYZVector speed_update(int charge, XYZPoint dfield, double time);
   XYZVector d_update(XYZVector v0, double time);
   XYZVector kin_factor2(XYZVector v0, bool momentum_flag);
 
 
  protected:
-  bool run(Electrode* electrode, double en);
+  bool run(Electrode* electrode, double en, int nthr);
   bool taskfunction(Electrode* electrode, charge_t q, double en);
 
  public:
@@ -76,7 +77,7 @@ class Transport {
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(double energy, Electrode* electrode, std::list<charge_t> q); 
+  int transport(double energy, Electrode* electrode, std::list<charge_t>& q); 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}
   double getDensity() {return density;}

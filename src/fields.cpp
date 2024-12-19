@@ -11,9 +11,9 @@
 
 
 
-ComsolFields::ComsolFields(TString fn) {
+ComsolFields::ComsolFields(std::string fn) : fname(fn)
+{
   bias = 1.0;
-  fname = fn;
   coords.clear();
   dmap.clear();
 }
@@ -24,7 +24,7 @@ void ComsolFields::read_fields() {
   XYZPoint p;
   XYZPoint pe;
 
-  TFile* ffd = new TFile(fname.Data(),"read");
+  TFile* ffd = new TFile(fname.data(),"read");
   TNtupleD* ntd = (TNtupleD*)ffd->Get("weighting");
   int entries = ntd->GetEntries();
 
@@ -52,7 +52,8 @@ void ComsolFields::read_fields() {
 }
 
 
-Fields::Fields(ComsolFields* fem, GeometryModel* g) {
+Fields::Fields(ComsolFields* fem, GeometryModel* g)
+{
   gm = g; // have access to geometry model
 
   allx = 0; // null ptr

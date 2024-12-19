@@ -2,10 +2,10 @@
 #define FIELDS_HH
 
 #include <vector>
+#include <string>
 
 // ROOT includes
 #include "TKDTree.h"
-#include "TString.h"
 #include "Math/Point3D.h"
 
 
@@ -22,7 +22,7 @@ class ComsolFields {
   // scaling the weighting field for two electrodes
   double bias;
   // which ROOT file to read the weighting field
-  TString fname;
+  std::string fname;
   std::vector<XYZPoint> coords;
   std::vector<XYZPoint> dmap;
 
@@ -30,10 +30,10 @@ class ComsolFields {
 
  public:
   // Constructor
-  ComsolFields(TString fname); // from file
+  ComsolFields(std::string fname); // from file
   
   // Default destructor
-  ~ComsolFields() {;}
+  ~ComsolFields() = default;
 
   // Methods
   void read_fields();

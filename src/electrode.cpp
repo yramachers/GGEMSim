@@ -5,11 +5,10 @@
 // Electrode Model
 //****************
 // Constructors
-Electrode::Electrode(ComsolFields* fem, GeometryModel* g) {
-  gm = g;
-  femfields = fem;
-
-  field = 0;
+Electrode::Electrode(ComsolFields* fem, GeometryModel* g)
+  : gm(g), femfields(fem)
+{
+  field = NULL;
 }
 
 

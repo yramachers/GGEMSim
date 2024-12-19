@@ -3,7 +3,6 @@
 #include "thread_pool.hpp"
 
 // standard includes
-#include <vector>
 #include <iostream>
 #include <future>
 #include <functional>
@@ -34,12 +33,18 @@ Transport::~Transport() {
 
 
 // calculate a signal on electrode for any charges in region of interest
-int Transport::transport(double energy, Electrode* electrode, std::list<charge_t> q) {
+int Transport::transport(double energy, Electrode* electrode, std::list<charge_t>& q) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
     return false;
   }
+  // First, prepare electrode object for transport
+  electrode->initfields(); // ready to transport
+
+  unsigned int nthreads = std::thread::hardware_concurrency();
+  if (nthreads>4) nthreads = 4; // limit max CPU number
+
   // got all charges as initial input
   charges.clear(); // copy to data member
   for (charge_t cc : q) {
@@ -48,7 +53,7 @@ int Transport::transport(double energy, Electrode* electrode, std::list<charge_t
   //  if (!charges.empty()) { // don't run on empty charges
   //  std::cout << "Transport: number of charges in box: " << charges.size() << std::endl;
   int counter = 0;
-  while (!run(electrode, energy) && counter<10) { // runs first charge
+  while (!run(electrode, energy, nthreads) && counter<5) { // runs first charge
   // next attempt with initial charge
     charges.clear();
     for (charge_t cc : q) {
@@ -190,9 +195,9 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       
       // check geometry and fields
       exyz = electrode->getFieldValue(analytic,point);
-      // std::cout << "analytic bool " << analytic << std::endl;
-      // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
-      // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
+      //      std::cout << "analytic bool " << analytic << std::endl;
+      //      std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+      //      std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "collision at energy " << energy << std::endl;
       //      std::cout << "speed X: " << speed.X() << " Z: " << speed.Z() << std::endl;
       //      std::cout << "time between coll " << running_time << std::endl;
@@ -200,7 +205,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       // reset system
       running_time = 0.0;
     }
-    if (time_sum>=1.0e-7) { // particle got stuck
+    if (time_sum>=5.0e-7) { // particle got stuck
       analytic = true; // Stop
       std::cout << "STUCK: time = " << time_sum << std::endl;
     }
@@ -212,14 +217,9 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
   return true;
 }
 
-bool Transport::run(Electrode* electrode, double en) {
-  // First, prepare electrode object for transport
-  electrode->initfields(); // ready to transport
-
-  unsigned int nthreads = std::thread::hardware_concurrency();
-  if (nthreads>4) nthreads = 4; // limit max CPU number
+bool Transport::run(Electrode* electrode, double en, int nthr) {
   std::vector<std::future<bool> > results; 
-  thread_pool* pool = new thread_pool(nthreads); // task pool
+  thread_pool* pool = new thread_pool(nthr); // task pool
 
   charge_t q;
   int counter = 0;
@@ -228,7 +228,7 @@ bool Transport::run(Electrode* electrode, double en) {
     //    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
 
     // empty charges and store tasks in blocks of nthreads
-    for (int n=0;n<nthreads && !charges.empty();n++) { // drain charges basket
+    for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
       q = charges.front(); // get front element of std::list
       results.push_back(pool->async(std::function<bool(Electrode*, charge_t, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), electrode, q, en)); // tasks
       charges.pop_front(); // remove first charge from list
@@ -487,7 +487,7 @@ double Transport::stauffer_elastic_cs(double energy)
     double k = TMath::Sqrt(energy/13.6025); // k in [amu]
     double sigma, factor, sum = 0.0;
 
-    double* delta = calc_phaseshift1to6(energy);
+    std::array<double,6> delta = calc_phaseshift1to6(energy);
 
     factor = 4.0*TMath::Pi()/(k*k);
     for (l=0;l<6;l++) 
@@ -495,7 +495,6 @@ double Transport::stauffer_elastic_cs(double energy)
 
     sigma = factor * sum;
     
-    delete [] delta;
     // unit conversion Bohr radius^2 to SI
     sigma *= 2.80028561e-21;
 
@@ -508,7 +507,7 @@ double Transport::stauffer_momentum_cs(double energy)
     double k = TMath::Sqrt(energy/13.6025); // k in [amu]
     double sigma, factor, sum = 0.0;
 
-    double* delta = calc_phaseshift1to6(energy);
+    std::array<double,6> delta = calc_phaseshift1to6(energy);
 
     factor = 4.0*TMath::Pi()/(k*k);
     for (l=0;l<5;l++) 
@@ -516,19 +515,18 @@ double Transport::stauffer_momentum_cs(double energy)
     
     sigma = factor * sum;
     
-    delete [] delta;
     // unit conversion Bohr radius^2 to SI
     sigma *= 2.80028561e-21;
 
     return sigma;
 }
 
-double* Transport::calc_phaseshift1to6(double energy)
+std::array<double,6> Transport::calc_phaseshift1to6(double energy)
 {
     int l;
     double beta_argon = 10.755;
     double k = TMath::Sqrt(energy/13.6025); // k in [amu]
-    double* delta = new double [6];
+    std::array<double,6> delta;
     // Energy input in [eV]
     // output cross section in m^2
     double h[5][4] = {{0.150575e1,0.0,0.0,0.0},{0.671099e1,0.225686e1,0.319699,0.107419},{-0.103246e3,-0.805571e1,-0.471566,0.0},{0.11987e2,0.213514e1,0.662807,-0.183263},{0.0,0.0,0.0,0.315322}};

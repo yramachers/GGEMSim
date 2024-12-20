@@ -14,45 +14,24 @@
 // Geometry Model
 //****************
 // Constructors
-GeometryModel::GeometryModel(const char* filename) {
+GeometryModel::GeometryModel(std::string filename) {
 
   // import geometry from file
   // closes geometry but ID's can be different to initial building
   TGeoManager* g = new TGeoManager("dummy","");
-  geom = g->Import(filename);
+  geom = g->Import(filename.data());
 
   if (!geom) {
     std::cout << "Could not import " << std::endl;
     return;
   }
-  else 
-    fill_plates(); // only constructed when geometry is known from file
 }
 
 
 // default Destructor
 GeometryModel::~GeometryModel() {
-  plates.clear();
   if (geom) delete geom;
 }
-
-
-
-void GeometryModel::fill_plates() {
-  TGeoVolume* vol = geom->FindVolumeFast("Comsol"); // hard-wired region name
-  TObjArray* lon = vol->GetNodes(); // should all be in comsol region
-  
-  TString name;
-  
-  for (int n=0;n<lon->GetEntries();n++) {
-    name = lon->At(n)->GetName();
-    if (name.Contains("Plate"))  // hard-wired plate name
-      plates.push_back((TGeoNode*)lon->At(n));
-  }
-  std::cout << "Geometry model; got "<< plates.size() << " electrodes" << std::endl;
-
-}
-
 
 
 int GeometryModel::whereami(double xv, double yv, double zv) {
@@ -70,6 +49,9 @@ int GeometryModel::whereami(double xv, double yv, double zv) {
     return 1; // drifting region, field map
 
   else if (region.Contains("Plate")) {
+    return -1; // stop
+  }
+  else if (region.Contains("Anode")) {
     return -1; // stop
   }
   else if (region.Contains("World")) {

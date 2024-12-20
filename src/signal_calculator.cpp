@@ -2,6 +2,7 @@
 // THGEM: transport through hole
 //**********************************
 
+#include <vector>
 #include <list>
 #include <iostream>
 #include <string>
@@ -21,37 +22,50 @@
 
 int main(int argc, char** argv) {
   // function declare
-  void signal_calculation(int seed, double en, double bias, double xstart, double ystart, double zstart, std::string fname);
+  void signal_calculation(int, const XYZPoint&, const std::vector<double>&, const std::vector<std::string>&);
 
   // command line interface
   CLI::App app{"thgem signal calculator"};
   int    seed = 1234;
-  double en = 1.0;
-  double bias = 400.0;
-  double xs = 0.055;
-  double ys = 0.0;
-  double zs = 0.087;
+  double en = 0.2; // [eV]
+  double bias = 600.0; // [V]
+  double xs = 0.06; // [cm]
+  double ys = 0.0;  // [cm]
+  double zs = 0.151; // [cm]
+  std::vector<std::string> names;
+  std::vector<double> config;
   std::string outputFileName = "avalanche.root";
+  std::string gdmlName = "DGGEM_5_2_5.gdml";
+  std::string fieldName = "2DGGEM_5_2_5-1V.root";
   
-  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.055");
+  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.06");
   app.add_option("-y,--ystart", zs, "<y start position [cm]> Default: 0.0");
-  app.add_option("-z,--zstart", xs, "<z start position [cm]> Default: 0.087");
-  app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 400.0");
-  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 1.0");
+  app.add_option("-z,--zstart", xs, "<z start position [cm]> Default: 0.151");
+  app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
+  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.2");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 1234");
   app.add_option("-o,--outfile", outputFileName, "<output file name> Default: avalanche.root");
+  app.add_option("-g,--gdmlfile", gdmlName, "<gdml file name> Default: DGGEM_5_2_5.gdml");
+  app.add_option("-f,--fieldfile", fieldName, "<field file name> Default: 2DGGEM_5_2_5-1V.root");
 
   CLI11_PARSE(app, argc, argv);
 
   //run the code
-  signal_calculation(seed,en,bias,xs,ys,zs,outputFileName);
+  config.push_back(en);
+  config.push_back(bias);
+  names.push_back(outputFileName);
+  names.push_back(gdmlName);
+  names.push_back(fieldName);
+  XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
+  
+  signal_calculation(seed, loc, config, names);
   
   return 0;
 }
 
 
 
-void signal_calculation(int seed, double en, double bias, double xstart, double ystart, double zstart, std::string fname) {
+void signal_calculation(int seed, const XYZPoint& loc, const std::vector<double>& conf, const std::vector<std::string>& names) {
   //----------------------------------------------------------
   // Hit data
   // THGEM in x,y plane
@@ -64,7 +78,6 @@ void signal_calculation(int seed, double en, double bias, double xstart, double 
   // single charge start on top of THGEM, off right in x from central hole
   // 0.7 mm to x, 1 mum above plate
   charge_t hit;
-  XYZPoint loc(xstart, ystart, zstart); // [cm] unit from root geometry
   double qq = -1.0; // [e]
   hit.location = loc;
   hit.charge = qq;
@@ -74,14 +87,13 @@ void signal_calculation(int seed, double en, double bias, double xstart, double 
 
   //----------------------------------------------------------
   // Geometry
-  const char* gfname = "MGEMgeometry.gdml";
-  GeometryModel* gmodel = new GeometryModel(gfname);
+  GeometryModel* gmodel = new GeometryModel(names.at(1));
 
   //----------------------------------------------------------
   // FEM fields from file
   // hard-coded field map files
-  ComsolFields* fem = new ComsolFields("Mgemweight.root");
-  fem->setBias(bias);
+  ComsolFields* fem = new ComsolFields(names.at(2));
+  fem->setBias(conf.at(1));
 
   //----------------------------------------------------------
   // Transport
@@ -94,7 +106,7 @@ void signal_calculation(int seed, double en, double bias, double xstart, double 
   fem->read_fields();
   Electrode* anode = new Electrode(fem, gmodel);
 
-  int attempts = transportation->transport(en, anode, hits);
+  int attempts = transportation->transport(conf.at(0), anode, hits);
 
   std::cout << "attempt: " << attempts << " from 1000" << std::endl;
   std::cout << "Total excitation photons counted: " << transportation->getPhotons() << std::endl;
@@ -104,13 +116,13 @@ void signal_calculation(int seed, double en, double bias, double xstart, double 
   // to storage
   //----------------------------------------------------------
   // metainfo
-  TParameter<double> xpar("xstart",xstart);
-  TParameter<double> ypar("ystart",ystart);
-  TParameter<double> zpar("zstart",zstart);
-  TParameter<double> bpar("bias",bias);
-  TParameter<double> epar("initenergy",en);
+  TParameter<double> xpar("xstart",loc.x());
+  TParameter<double> ypar("ystart",loc.y());
+  TParameter<double> zpar("zstart",loc.z());
+  TParameter<double> bpar("bias",conf.at(1));
+  TParameter<double> epar("initenergy",conf.at(0));
   // file
-  TFile ff(fname.c_str(),"RECREATE");
+  TFile ff(names.at(0).c_str(),"RECREATE");
   TNtuple* ntcharge = new TNtuple("charge","Ionization charge locations","cx:cy:cz");
   TNtuple* ntgamma = new TNtuple("gamma","photon locations","px:py:pz");
   std::vector<XYZPoint> ac = transportation->allcharges();

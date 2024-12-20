@@ -2,6 +2,7 @@
 #define GEOMODEL_HH
 
 #include <vector>
+#include <string>
 
 // ROOT includes
 #include "TGeoManager.h"
@@ -18,19 +19,15 @@ class GeometryModel {
  private:
   TGeoManager* geom;
 
-  // all plates
-  std::vector<TGeoNode*> plates; // stores electrodes as TGeoNodes
-  
 
  protected:  
-  void fill_plates();
 
 
  public:
 
   // Constructor
   // from file: geometry
-  GeometryModel(const char* filename); 
+  GeometryModel(std::string filename); 
   
   // Default destructor
   ~GeometryModel();
@@ -39,9 +36,6 @@ class GeometryModel {
   int whereami(double xv, double yv, double zv); // int coding of regions
 
   // geometry get/set
-
-  // access geometry data
-  std::vector<TGeoNode*> electrodes() {return plates;}
 
 };
 #endif

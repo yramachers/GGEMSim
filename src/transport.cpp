@@ -78,7 +78,6 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
   int photon_counter = 0;
   int ion_counter = 0;
   int check = 0;
-  int real_collisions = 0;
   
   XYZVector distance_sum, distance_step;
 
@@ -110,7 +109,6 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
   speed.SetZ(speed_start*TMath::Sin(tangle));
   
   time_sum = running_time = 0.0;
-  real_collisions = 0;
 
   double x, y, z;
   double xe, ye, ze;
@@ -131,7 +129,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
 
   // transport loop
   while (!analytic) { 
-	
+    check++;
     // prepare and update
     time_step = time_update(tau);
     running_time += time_step;
@@ -145,6 +143,10 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
     energy = 0.5*mumass_eV*speed.Mag2()/c2; // non-rel. energy in [eV]
     // artificially raise the cross section 
     kv = speed.R() * cross_section(energy,momentum_flag,inel_flag);
+
+    if (check%10000)
+      std::cout << " while loop mod 10000 with kv = " << kv << " speed.R " << speed.R() << " cs=" <<
+		cross_section(energy,momentum_flag,inel_flag) << std::endl;
 
     if (inel_flag>0) { // was ionization
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
@@ -411,10 +413,10 @@ void Transport::find_phaseshift(double e, double* phaseshift)
 {
     if (e<0.02) e = 0.02; // minimum energy value fixed
 
-    TGraph* data0 = new TGraph();
-    TGraph* data1 = new TGraph();
-    TGraph* data2 = new TGraph();
-    TGraph* data3 = new TGraph();
+    TGraph* data0 = new TGraph(11);
+    TGraph* data1 = new TGraph(11);
+    TGraph* data2 = new TGraph(11);
+    TGraph* data3 = new TGraph(11);
     double energy[11] = {0.02,0.06,0.1,0.2,0.3,0.4,0.5,0.7,1.0,2.0,3.0};
     double values[44] = {4.426e-2,3.092e-3,5.836e-4,1.537e-4,5.363e-2,8.155e-3,1.577e-3,5.21e-4,5.133e-2,1.219e-2,2.686e-3,8.937e-4,3.255e-2,1.93e-2,5.516e-3,1.831e-3,8.595e-3,2.307e-2,8.379e-3,2.756e-3,-1.639e-2,2.46e-2,1.128e-2,3.667e-3,-4.122e-2,2.444e-2,1.419e-2,4.574e-3,-8.931e-2,2.04e-2,2.016e-2,6.374e-3,-1.566e-1,8.199e-3,2.927e-2,9.059e-3,-3.48e-1,-5.612e-3,6.446e-2,1.788e-2,-5.057e-1,-1.329e-1,1.111e-1,2.669e-2};
     
@@ -422,9 +424,9 @@ void Transport::find_phaseshift(double e, double* phaseshift)
     Int_t i;
     for (i=0;i<m;i++) {
     	data0->SetPoint(i,energy[i],values[i*n]);
-	    data1->SetPoint(i,energy[i],values[1+i*n]);
-	    data2->SetPoint(i,energy[i],values[2+i*n]);
-	    data3->SetPoint(i,energy[i],values[3+i*n]);
+	data1->SetPoint(i,energy[i],values[1+i*n]);
+	data2->SetPoint(i,energy[i],values[2+i*n]);
+	data3->SetPoint(i,energy[i],values[3+i*n]);
     }
     phaseshift[0] = data0->Eval(e);
     phaseshift[1] = data1->Eval(e);
@@ -476,10 +478,10 @@ double Transport::cross_section(double energy, bool &momentum_flag, int &inel_fl
       return 0.0; // stops further transport after inel
     }
     // elastic as normal
-    ratio = cs_ptrans / cs_etrans;
+    ratio = cs_ptrans / cs_el;
     if (rnd->Rndm() <  ratio) momentum_flag = kTRUE;
     else momentum_flag = kFALSE; // energy transfer cs
-    return (momentum_flag ? cs_ptrans+cs_inel : cs_etrans+cs_inel);
+    return (momentum_flag ? cs_ptrans+cs_inel : cs_el+cs_inel);
   }
 }
 
@@ -603,10 +605,10 @@ double Transport::inelastic_cs(double energy)
   for (int j=1;j<flag;j++) { // all previous
   	par[0] = array[j-1][0];
   	par[1] = array[j-1][1];
-	  par[2] = array[j-1][2];
-	  par[3] = array[j-1][3];
-	  func->SetParameters(par);
-	  result += func->Eval(bins[j]-1.0e-3);
+	par[2] = array[j-1][2];
+	par[3] = array[j-1][3];
+	func->SetParameters(par);
+	result += func->Eval(bins[j]-1.0e-3);
   }
   par[0] = array[flag-1][0]; // + actual
   par[1] = array[flag-1][1];

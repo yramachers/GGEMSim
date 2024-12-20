@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
   std::string fieldName = "2DGGEM_5_2_5-1V.root";
   
   app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.06");
-  app.add_option("-y,--ystart", zs, "<y start position [cm]> Default: 0.0");
-  app.add_option("-z,--zstart", xs, "<z start position [cm]> Default: 0.151");
+  app.add_option("-y,--ystart", ys, "<y start position [cm]> Default: 0.0");
+  app.add_option("-z,--zstart", zs, "<z start position [cm]> Default: 0.151");
   app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
   app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.2");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 1234");

@@ -196,7 +196,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       // check geometry and fields
       exyz = electrode->getFieldValue(analytic,point);
       std::cout << "analytic bool " << analytic << std::endl;
-      //      std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+      std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "collision at energy " << energy << std::endl;
       //      std::cout << "speed X: " << speed.X() << " Z: " << speed.Z() << std::endl;
@@ -208,6 +208,8 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
     if (time_sum>=5.0e-7) { // particle got stuck
       analytic = true; // Stop
       std::cout << "STUCK: time = " << time_sum << std::endl;
+      std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
+      std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
 
   }

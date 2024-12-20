@@ -21,8 +21,6 @@
 
 
 int main(int argc, char** argv) {
-  // function declare
-  void signal_calculation(int, const XYZPoint&, const std::vector<double>&, const std::vector<std::string>&);
 
   // command line interface
   CLI::App app{"thgem signal calculator"};
@@ -32,8 +30,6 @@ int main(int argc, char** argv) {
   double xs = 0.06; // [cm]
   double ys = 0.0;  // [cm]
   double zs = 0.151; // [cm]
-  std::vector<std::string> names;
-  std::vector<double> config;
   std::string outputFileName = "avalanche.root";
   std::string gdmlName = "DGGEM_5_2_5.gdml";
   std::string fieldName = "2DGGEM_5_2_5-1V.root";
@@ -51,32 +47,8 @@ int main(int argc, char** argv) {
   CLI11_PARSE(app, argc, argv);
 
   //run the code
-  config.push_back(en);
-  config.push_back(bias);
-  names.push_back(outputFileName);
-  names.push_back(gdmlName);
-  names.push_back(fieldName);
   XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
   
-  signal_calculation(seed, loc, config, names);
-  
-  return 0;
-}
-
-
-
-void signal_calculation(int seed, const XYZPoint& loc, const std::vector<double>& conf, const std::vector<std::string>& names) {
-  //----------------------------------------------------------
-  // Hit data
-  // THGEM in x,y plane
-  // z drift direction to THGEM
-  // |  x, 
-  // | /
-  // |/___ y
-  // 
-  // MGEM [cm]: +-0.08 shift of plates, plate 2x2 full sides, thickness +- 0.005
-  // single charge start on top of THGEM, off right in x from central hole
-  // 0.7 mm to x, 1 mum above plate
   charge_t hit;
   double qq = -1.0; // [e]
   hit.location = loc;
@@ -87,13 +59,13 @@ void signal_calculation(int seed, const XYZPoint& loc, const std::vector<double>
 
   //----------------------------------------------------------
   // Geometry
-  GeometryModel* gmodel = new GeometryModel(names.at(1));
+  GeometryModel* gmodel = new GeometryModel(gdmlName);
 
   //----------------------------------------------------------
   // FEM fields from file
   // hard-coded field map files
-  ComsolFields* fem = new ComsolFields(names.at(2));
-  fem->setBias(conf.at(1));
+  ComsolFields* fem = new ComsolFields(fieldName);
+  fem->setBias(bias);
 
   //----------------------------------------------------------
   // Transport
@@ -106,7 +78,7 @@ void signal_calculation(int seed, const XYZPoint& loc, const std::vector<double>
   fem->read_fields();
   Electrode* anode = new Electrode(fem, gmodel);
 
-  int attempts = transportation->transport(conf.at(0), anode, hits);
+  int attempts = transportation->transport(en, anode, hits);
 
   std::cout << "attempt: " << attempts << " from 1000" << std::endl;
   std::cout << "Total excitation photons counted: " << transportation->getPhotons() << std::endl;
@@ -119,10 +91,10 @@ void signal_calculation(int seed, const XYZPoint& loc, const std::vector<double>
   TParameter<double> xpar("xstart",loc.x());
   TParameter<double> ypar("ystart",loc.y());
   TParameter<double> zpar("zstart",loc.z());
-  TParameter<double> bpar("bias",conf.at(1));
-  TParameter<double> epar("initenergy",conf.at(0));
+  TParameter<double> bpar("bias",bias);
+  TParameter<double> epar("initenergy",en);
   // file
-  TFile ff(names.at(0).c_str(),"RECREATE");
+  TFile ff(outputFileName.data(),"RECREATE");
   TNtuple* ntcharge = new TNtuple("charge","Ionization charge locations","cx:cy:cz");
   TNtuple* ntgamma = new TNtuple("gamma","photon locations","px:py:pz");
   std::vector<XYZPoint> ac = transportation->allcharges();
@@ -151,8 +123,7 @@ void signal_calculation(int seed, const XYZPoint& loc, const std::vector<double>
   delete transportation;
   delete fem;
   delete gmodel;
-
-  return;
+  
+  return 0;
 }
-
 

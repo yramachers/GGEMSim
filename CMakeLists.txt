@@ -38,11 +38,5 @@ target_link_libraries(thgem ${ROOT_LIBRARIES})
 add_executable(signal_calculator.exe src/signal_calculator.cpp)
 target_link_libraries(signal_calculator.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
 
-#add_executable(signal_scan.exe src/signal_scan.cpp)
-#target_link_libraries(signal_scan.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
-
-#add_executable(multi_scan.exe src/multi_scan.cpp)
-#target_link_libraries(multi_scan.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
-
 #add_executable(testCS.exe utils/testCS.cpp)
 #target_link_libraries(testCS.exe ${ROOT_LIBRARIES})

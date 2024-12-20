@@ -24,7 +24,7 @@ void Electrode::initfields() {
 
 
 XYZPoint Electrode::getFieldValue(bool& analytic, XYZPoint& p) {
-  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   XYZPoint triplet;
   
   triplet = field->getDriftField(p, analytic);

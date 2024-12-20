@@ -1,7 +1,7 @@
 #ifndef ELECTRODES_HH
 #define ELECTRODES_HH
 
-#include <mutex>
+// #include <mutex>
 
 // ROOT
 #include "Math/Point3D.h"
@@ -25,7 +25,7 @@ class Electrode {
   ComsolFields* femfields;
 
   Fields* field; // specific for each electrode, constructed at creation
-  std::mutex mtx;
+  //  std::mutex mtx;
 
  protected:
 

@@ -1,6 +1,6 @@
 // us
 #include "transport.hh"
-#include "thread_pool.hpp"
+//#include "thread_pool.hpp"
 
 // standard includes
 #include <iostream>
@@ -42,9 +42,9 @@ int Transport::transport(double energy, Electrode* electrode, std::list<charge_t
   // First, prepare electrode object for transport
   electrode->initfields(); // ready to transport
 
-  unsigned int nthreads = std::thread::hardware_concurrency();
-  if (nthreads>4) nthreads = 4; // limit max CPU number
-
+  //  unsigned int nthreads = std::thread::hardware_concurrency();
+  //  if (nthreads>4) nthreads = 4; // limit max CPU number
+  int nthreads = 1;
   // got all charges as initial input
   charges.clear(); // copy to data member
   for (charge_t cc : q) {
@@ -195,12 +195,12 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       
       // check geometry and fields
       exyz = electrode->getFieldValue(analytic,point);
-      //      std::cout << "analytic bool " << analytic << std::endl;
+      std::cout << "analytic bool " << analytic << std::endl;
       //      std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
-      //      std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
+      std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "collision at energy " << energy << std::endl;
       //      std::cout << "speed X: " << speed.X() << " Z: " << speed.Z() << std::endl;
-      //      std::cout << "time between coll " << running_time << std::endl;
+      std::cout << "time between coll " << running_time << std::endl;
 
       // reset system
       running_time = 0.0;
@@ -218,37 +218,42 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
 }
 
 bool Transport::run(Electrode* electrode, double en, int nthr) {
-  std::vector<std::future<bool> > results; 
-  thread_pool* pool = new thread_pool(nthr); // task pool
+  //  std::vector<std::future<bool> > results; 
+  //  thread_pool* pool = new thread_pool(nthr); // task pool
 
   charge_t q;
   int counter = 0;
 
   while (!charges.empty()) { // stop when refilling stopped
+    q = charges.front(); // get front element of std::list
+    taskfunction(electrode, q, en);
+    charges.pop_front(); // remove first charge from list
+    counter++; // counts tasks/electrons launched
+
     //    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
 
     // empty charges and store tasks in blocks of nthreads
-    for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
-      q = charges.front(); // get front element of std::list
-      results.push_back(pool->async(std::function<bool(Electrode*, charge_t, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), electrode, q, en)); // tasks
-      charges.pop_front(); // remove first charge from list
-      counter++; // counts tasks/electrons launched
-    }
+    // for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
+    //   q = charges.front(); // get front element of std::list
+    //   results.push_back(pool->async(std::function<bool(Electrode*, charge_t, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), electrode, q, en)); // tasks
+    //   charges.pop_front(); // remove first charge from list
+    //   counter++; // counts tasks/electrons launched
+    // }
 
       //    std::future<bool> status = pool.async(std::function<bool(Electrode*, charge_t)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2)), electrode, q); // tasks in pool
     // drain task pool
-    for (std::future<bool>& status : results) 
-      status.get(); // wait for completion before the next round
+    // for (std::future<bool>& status : results) 
+    //   status.get(); // wait for completion before the next round
     
       //	counter++; // counts tasks launched
     //    }
     // all tasks from pool finished - clear it. Next batch of charges in pool.
-    results.clear();
+    //    results.clear();
   }
 
   //  std::cout << "from threads, total task counter = " << counter << std::endl;
   // charge loop finished
-  delete pool;
+  //  delete pool;
   if (getPhotons()>0 || counter>1)
     return true;
   else
@@ -257,7 +262,7 @@ bool Transport::run(Electrode* electrode, double en, int nthr) {
 
 
 void Transport::book_charge(charge_t q) {
-  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   charges.push_back(q); // total charge list to be filled/drained in threads
   chargeStore.push_back(q.location); // permanent storage
   return;
@@ -265,21 +270,21 @@ void Transport::book_charge(charge_t q) {
 
 
 void Transport::book_photon(charge_t q) {
-  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   photonStore.push_back(q.location); // permanent storage
   return;
 }
 
 
 void Transport::addToGammas(int g) {
-  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   photon_number += g;
   return;
 }
 
 
 void Transport::addToIons(int i) {
-  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   ion_number += i;
   return;
 }
@@ -339,7 +344,7 @@ XYZVector Transport::kin_factor2(XYZVector v0, bool momentum_flag)
 //****************************
 double Transport::angle_function2(double energy)
 {
-  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   double dcs(double* x, double* par);
   if (energy <= 0.02) // trial correction
     return TMath::Pi()*rnd->Rndm();//isotropic for <0.02 eV
@@ -576,7 +581,7 @@ double Transport::func_b(int l)
 
 double Transport::inelastic_cs(double energy)
 {
-  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   double inelsum(double* x, double* par);
   int flag;
 

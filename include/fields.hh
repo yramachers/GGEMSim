@@ -22,7 +22,7 @@ class ComsolFields {
   // scaling the weighting field for two electrodes
   double bias;
   // which ROOT file to read the weighting field
-  std::string fname;
+  std::string& fname;
   std::vector<XYZPoint> coords;
   std::vector<XYZPoint> dmap;
 
@@ -30,7 +30,7 @@ class ComsolFields {
 
  public:
   // Constructor
-  ComsolFields(std::string fname); // from file
+  ComsolFields(std::string& fname); // from file
   
   // Default destructor
   ~ComsolFields() = default;

@@ -14,7 +14,7 @@
 // Geometry Model
 //****************
 // Constructors
-GeometryModel::GeometryModel(std::string filename) {
+GeometryModel::GeometryModel(std::string& filename) {
 
   // import geometry from file
   // closes geometry but ID's can be different to initial building

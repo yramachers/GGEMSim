@@ -4,7 +4,7 @@
 #include <list>
 #include <vector>
 #include <array>
-#include <mutex>
+// #include <mutex>
 
 // ROOT
 #include "TRandom3.h"
@@ -37,7 +37,7 @@ class Transport {
   std::list<charge_t> charges;
   std::vector<XYZPoint> chargeStore;
   std::vector<XYZPoint> photonStore;
-  std::mutex mtx;
+  //  std::mutex mtx;
   TRandom3* rnd;
 
   // used by task function

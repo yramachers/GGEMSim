@@ -11,7 +11,7 @@
 
 
 
-ComsolFields::ComsolFields(std::string fn) : fname(fn)
+ComsolFields::ComsolFields(std::string& fn) : fname(fn)
 {
   bias = 1.0;
   coords.clear();
@@ -56,10 +56,10 @@ Fields::Fields(ComsolFields* fem, GeometryModel* g)
 {
   gm = g; // have access to geometry model
 
-  allx = 0; // null ptr
-  allz = 0;
-  alldx = 0;
-  alldz = 0;
+  allx = NULL; // null ptr
+  allz = NULL;
+  alldx = NULL;
+  alldz = NULL;
   
   prepare_fields(fem);
 }

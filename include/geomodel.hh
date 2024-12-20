@@ -27,7 +27,7 @@ class GeometryModel {
 
   // Constructor
   // from file: geometry
-  GeometryModel(std::string filename); 
+  GeometryModel(std::string& filename); 
   
   // Default destructor
   ~GeometryModel();

@@ -4,8 +4,9 @@
 
 // standard includes
 #include <iostream>
-#include <future>
-#include <functional>
+// #include <cmath>
+// #include <future>
+// #include <functional>
 
 // ROOT includes
 #include "TMath.h"
@@ -129,7 +130,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
 
   // transport loop
   while (!analytic) { 
-    check++;
+    //    check++;
     // prepare and update
     time_step = time_update(tau);
     running_time += time_step;
@@ -141,12 +142,13 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
     
     // CMS system energy
     energy = 0.5*mumass_eV*speed.Mag2()/c2; // non-rel. energy in [eV]
+
     // artificially raise the cross section 
     kv = speed.R() * cross_section(energy,momentum_flag,inel_flag);
-
-    if (check%10000)
-      std::cout << " while loop mod 10000 with kv = " << kv << " speed.R " << speed.R() << " cs=" <<
-		cross_section(energy,momentum_flag,inel_flag) << std::endl;
+    
+    // if (check%10000)
+    //   std::cout << " while loop mod 10000 with kv = " << kv << " speed.R " << speed.R() << " cs=" <<
+    // 		cross_section(energy,momentum_flag,inel_flag) << std::endl;
 
     if (inel_flag>0) { // was ionization
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
@@ -213,7 +215,6 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
       std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
-
   }
   // one charge done, book counters to global
   addToGammas(photon_counter);
@@ -315,32 +316,32 @@ XYZVector Transport::d_update(XYZVector v0, double time)
 XYZVector Transport::kin_factor2(XYZVector v0, bool momentum_flag)
 {
   Polar3D<double> vel(v0);
-    double theta0 = v0.Theta();
-    double phi0 = v0.Phi();
-    double energy, transfer;
-    double c2 = 2.99792458e8*2.99792458e8; // c^2 [m/s]^2
-    double argon_mass = 39.95*1.0735; // [GeV/c^2]
-    double e_mass = 0.511e-3; // [GeV/c^2]
-    double reduced_mass = (4.0*argon_mass*e_mass)/((argon_mass + e_mass)*(argon_mass + e_mass));
-    double mumass_eV = 1.0e9 * e_mass * argon_mass / (e_mass + argon_mass);
-
-    energy = 0.5 * mumass_eV * v0.Mag2() / c2; // non-rel. energy in [eV]
-    double azimuth = TMath::TwoPi()*rnd->Rndm();
-    double theta = angle_function2(energy);
-    double phi = 0.5*TMath::ASin((argon_mass + e_mass)/argon_mass*TMath::Sin(theta));
-    transfer = TMath::Sqrt((1.0 - reduced_mass * TMath::Cos(phi)*TMath::Cos(phi)));
-
-    if (momentum_flag) {
-      vel.SetTheta(theta+theta0); // relative to old theta
-      vel.SetPhi(azimuth+phi0);
-      XYZVector res(vel);
-      return res; // return XYZVector type
-    }
-    else {
-      vel.SetR(vel.R() * transfer); // magnitude change
-      XYZVector res(vel);
-      return res;
-    }
+  double theta0 = v0.Theta();
+  double phi0 = v0.Phi();
+  double energy, transfer;
+  double c2 = 2.99792458e8*2.99792458e8; // c^2 [m/s]^2
+  double argon_mass = 39.95*1.0735; // [GeV/c^2]
+  double e_mass = 0.511e-3; // [GeV/c^2]
+  double reduced_mass = (4.0*argon_mass*e_mass)/((argon_mass + e_mass)*(argon_mass + e_mass));
+  double mumass_eV = 1.0e9 * e_mass * argon_mass / (e_mass + argon_mass);
+  
+  energy = 0.5 * mumass_eV * v0.Mag2() / c2; // non-rel. energy in [eV]
+  double azimuth = TMath::TwoPi()*rnd->Rndm();
+  double theta = angle_function2(energy);
+  double phi = 0.5*TMath::ASin((argon_mass)/(argon_mass+ e_mass) * TMath::Sin(theta));
+  transfer = TMath::Sqrt((1.0 - reduced_mass * TMath::Cos(phi)*TMath::Cos(phi)));
+  
+  if (momentum_flag) {
+    vel.SetTheta(theta+theta0); // relative to old theta
+    vel.SetPhi(azimuth+phi0);
+    XYZVector res(vel);
+    return res; // return XYZVector type
+  }
+  else {
+    vel.SetR(vel.R() * transfer); // magnitude change
+    XYZVector res(vel);
+    return res;
+  }
 }
 
 //****************************

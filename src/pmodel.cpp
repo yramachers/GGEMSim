@@ -32,6 +32,7 @@ Physics_Model::Physics_Model() {
 
 
 Physics_Model::~Physics_Model() {
+  delete rnd;
   delete afunc;
   delete inel;
   delete data0;

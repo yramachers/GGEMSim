@@ -14,17 +14,17 @@
 // Geometry Model
 //****************
 // Constructors
-GeometryModel::GeometryModel(std::string& filename) {
-
+void GeometryModel::init(std::string fname) {
   // import geometry from file
   // closes geometry but ID's can be different to initial building
   TGeoManager* g = new TGeoManager("dummy","");
-  geom = g->Import(filename.data());
+  geom = g->Import(fname.data());
 
   if (!geom) {
     std::cout << "Could not import " << std::endl;
     return;
   }
+
 }
 
 

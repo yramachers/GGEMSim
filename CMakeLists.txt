@@ -27,13 +27,11 @@ add_library(thgem SHARED
   include/geomodel.hh
   include/pmodel.hh
   include/transport.hh 
-  include/electrode.hh 
   src/thread_pool.cpp
   src/fields.cpp 
   src/geomodel.cpp 
   src/pmodel.cpp 
-  src/transport.cpp 
-  src/electrode.cpp )
+  src/transport.cpp)
 target_link_libraries(thgem ${ROOT_LIBRARIES})
 
 #Executables

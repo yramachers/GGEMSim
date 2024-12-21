@@ -10,21 +10,15 @@
 #include "Math/Vector3D.h"
 
 
-
-ComsolFields::ComsolFields(std::string& fn) : fname(fn)
-{
-  bias = 1.0;
+// come now as 2D data in x,y from comsol
+void ComsolFields::read_fields(std::string fn) {
   coords.clear();
   dmap.clear();
-}
-
-
-// come now as 2D data in x,y from comsol
-void ComsolFields::read_fields() {
+  
   XYZPoint p;
   XYZPoint pe;
 
-  TFile* ffd = new TFile(fname.data(),"read");
+  TFile* ffd = new TFile(fn.data(),"read");
   TNtupleD* ntd = (TNtupleD*)ffd->Get("weighting");
   int entries = ntd->GetEntries();
 
@@ -52,18 +46,7 @@ void ComsolFields::read_fields() {
 }
 
 
-Fields::Fields(ComsolFields* fem, GeometryModel* g)
-{
-  gm = g; // have access to geometry model
-
-  allx = NULL; // null ptr
-  allz = NULL;
-  alldx = NULL;
-  alldz = NULL;
-  
-  prepare_fields(fem);
-}
-
+// Fields class
 Fields::~Fields() {
   if (allx) { // all set together
     delete [] allx ;
@@ -74,8 +57,8 @@ Fields::~Fields() {
   if (coordinates) delete coordinates;
 }
 
-void Fields::prepare_fields(ComsolFields* fem) {
-  std::vector<XYZPoint> cdata = fem->positions();
+void Fields::prepare_fields(ComsolFields& fem) {
+  std::vector<XYZPoint> cdata = fem.positions();
   int nentries = cdata.size();
   //  std::cout << "in Fields::prepare fields." << std::endl;
 
@@ -99,7 +82,7 @@ void Fields::prepare_fields(ComsolFields* fem) {
   alldz = new double [nentries];
 
   // no scaling if Comsol fields are at 500V/cm
-  std::vector<XYZPoint> ddata = fem->driftmap();
+  std::vector<XYZPoint> ddata = fem.driftmap();
   for (int i=0;i<nentries;i++){
     alldx[i] = ddata[i].x();
     alldz[i] = ddata[i].z();
@@ -110,16 +93,7 @@ void Fields::prepare_fields(ComsolFields* fem) {
 }
 
 
-
-
-XYZPoint Fields::getDriftField(XYZPoint& p, bool& analytic) {
-  XYZPoint triplet = getFieldValue(p, analytic);
-  return triplet;
-}
-
-
-
-XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic) {
+XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic) {
 
   // common routine to ask for field value
   // bool drift decides between Drift field: drift=True
@@ -131,7 +105,7 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic) {
   double zv = p.z();
   double rad = TMath::Sqrt(xv*xv+yv*yv); // x-y-plane
   double angle = TMath::ATan2(yv,xv); // x-y-plane
-  int value = gm->whereami(xv,yv,zv);
+  int value = gm.whereami(xv,yv,zv);
   //  std::cout << "in Fields::answer to whereami: " << value << std::endl;
   XYZPoint triplet;
   

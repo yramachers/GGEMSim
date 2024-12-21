@@ -24,38 +24,34 @@ Transport::Transport(int seed) {
   chargeStore.clear();
   photonStore.clear();
   rnd = new TRandom3(seed);
-  pm = new Physics_Model();
 }
 
 
 Transport::~Transport() {
   delete rnd;
-  delete pm;
 }
 
 
 // calculate a signal on electrode for any charges in region of interest
-int Transport::transport(double energy, Electrode* electrode, std::list<charge_t>& q) {
+int Transport::transport(GeometryModel& gm, Fields& fd, std::list<charge_t>& q, double energy) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
     return false;
   }
-  // First, prepare electrode object for transport
-  electrode->initfields(); // ready to transport
 
   //  unsigned int nthreads = std::thread::hardware_concurrency();
   //  if (nthreads>4) nthreads = 4; // limit max CPU number
   int nthreads = 1;
+
   // got all charges as initial input
   charges.clear(); // copy to data member
   for (charge_t cc : q) {
     charges.push_front(cc); // insert from front
   }
-  //  if (!charges.empty()) { // don't run on empty charges
-  //  std::cout << "Transport: number of charges in box: " << charges.size() << std::endl;
+  
   int counter = 0;
-  while (!run(electrode, energy, nthreads) && counter<5) { // runs first charge
+  while (!run(gm, fd, energy, nthreads) && counter<5) { // runs first charge
   // next attempt with initial charge
     charges.clear();
     for (charge_t cc : q) {
@@ -67,7 +63,7 @@ int Transport::transport(double energy, Electrode* electrode, std::list<charge_t
 }
 
 
-bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
+bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double en) {
   // have a charge and info about all fields for each thread
 
   //Init
@@ -127,7 +123,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
   elcharge = q.charge; // -1: e-
   charge_t cc;
 
-  exyz = electrode->getFieldValue(analytic,point); // [V/m]
+  exyz = fd.getFieldValue(gm,point,analytic); // [V/m]
 
   // transport loop
   while (!analytic) { 
@@ -145,7 +141,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
     energy = 0.5*mumass_eV*speed.Mag2()/c2; // non-rel. energy in [eV]
 
     // artificially raise the cross section 
-    kv = speed.R() * pm->cross_section(energy,momentum_flag,inel_flag);
+    kv = speed.R() * pm.cross_section(energy,momentum_flag,inel_flag);
     
     // if (check%10000)
     //   std::cout << " while loop mod 10000 with kv = " << kv << " speed.R " << speed.R() << " cs=" <<
@@ -199,7 +195,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
       speed = kin_factor2(speed,momentum_flag);
       
       // check geometry and fields
-      exyz = electrode->getFieldValue(analytic,point);
+      exyz = fd.getFieldValue(gm,point,analytic);
       std::cout << "analytic bool " << analytic << std::endl;
       std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
@@ -223,7 +219,7 @@ bool Transport::taskfunction(Electrode* electrode, charge_t q, double en) {
   return true;
 }
 
-bool Transport::run(Electrode* electrode, double en, int nthr) {
+bool Transport::run(GeometryModel& gm, Fields& fd, double en, int nthr) {
   //  std::vector<std::future<bool> > results; 
   //  thread_pool* pool = new thread_pool(nthr); // task pool
 
@@ -232,7 +228,7 @@ bool Transport::run(Electrode* electrode, double en, int nthr) {
 
   while (!charges.empty()) { // stop when refilling stopped
     q = charges.front(); // get front element of std::list
-    taskfunction(electrode, q, en);
+    taskfunction(gm, fd, q, en);
     charges.pop_front(); // remove first charge from list
     counter++; // counts tasks/electrons launched
 
@@ -304,14 +300,12 @@ XYZVector Transport::speed_update(int charge, XYZPoint dfield, double time)
 {
   XYZVector Efield(charge*dfield.x(), charge*dfield.y(), charge*dfield.z()); // in [V/m]
   double eoverm = 1.759e11; // Coulomb / kg
-  XYZVector v = eoverm * Efield * time;
-  return v;
+  return eoverm * Efield * time;
 }
 
 XYZVector Transport::d_update(XYZVector v0, double time)
 {
-    XYZVector dstep = v0*time; // acceleration done already in speed_update
-    return dstep;
+    return  v0*time; // acceleration done already in speed_update
 }
 
 XYZVector Transport::kin_factor2(XYZVector v0, bool momentum_flag)
@@ -328,7 +322,7 @@ XYZVector Transport::kin_factor2(XYZVector v0, bool momentum_flag)
   
   energy = 0.5 * mumass_eV * v0.Mag2() / c2; // non-rel. energy in [eV]
   double azimuth = TMath::TwoPi()*rnd->Rndm();
-  double theta = pm->angle_function2(energy);
+  double theta = pm.angle_function2(energy);
   double phi = 0.5*TMath::ASin((argon_mass)/(argon_mass+ e_mass) * TMath::Sin(theta));
   transfer = TMath::Sqrt((1.0 - reduced_mass * TMath::Cos(phi)*TMath::Cos(phi)));
   

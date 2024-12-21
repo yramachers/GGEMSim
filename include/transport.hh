@@ -11,7 +11,8 @@
 #include "Math/Vector3D.h"
 
 //local
-#include "electrode.hh"
+#include "geomodel.hh"
+#include "fields.hh"
 #include "pmodel.hh"
 
 using namespace ROOT::Math;
@@ -39,7 +40,7 @@ class Transport {
   std::vector<XYZPoint> photonStore;
   //  std::mutex mtx;
   TRandom3* rnd;
-  Physics_Model* pm;
+  Physics_Model pm;
   
   // used by task function
   void book_charge(charge_t q);
@@ -53,8 +54,8 @@ class Transport {
 
 
  protected:
-  bool run(Electrode* electrode, double en, int nthr);
-  bool taskfunction(Electrode* electrode, charge_t q, double en);
+  bool run(GeometryModel& gm, Fields& fd, double en, int nthr);
+  bool taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double en);
 
  public:
   // Constructor
@@ -67,7 +68,8 @@ class Transport {
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(double energy, Electrode* electrode, std::list<charge_t>& q); 
+  int transport(GeometryModel& gm, Fields& fd, std::list<charge_t>& q, double energy); 
+
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}
   double getDensity() {return density;}

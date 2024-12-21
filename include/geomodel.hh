@@ -19,7 +19,6 @@ class GeometryModel {
  private:
   TGeoManager* geom;
 
-
  protected:  
 
 
@@ -27,15 +26,13 @@ class GeometryModel {
 
   // Constructor
   // from file: geometry
-  GeometryModel(std::string& filename); 
+  GeometryModel() = default; 
   
   // Default destructor
   ~GeometryModel();
 
   // Methods
+  void init(std::string fn);
   int whereami(double xv, double yv, double zv); // int coding of regions
-
-  // geometry get/set
-
 };
 #endif

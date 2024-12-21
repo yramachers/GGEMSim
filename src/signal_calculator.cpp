@@ -9,7 +9,6 @@
 
 // us
 #include "transport.hh"
-#include "electrode.hh"
 #include "fields.hh"
 #include "geomodel.hh"
 #include "CLI11.hpp"
@@ -59,14 +58,19 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------
   // Geometry
-  GeometryModel* gmodel = new GeometryModel(gdmlName);
-
+  GeometryModel gmodel;
+  gmodel.init(gdmlName);
+  
   //----------------------------------------------------------
   // FEM fields from file
   // hard-coded field map files
-  ComsolFields* fem = new ComsolFields(fieldName);
-  fem->setBias(bias);
+  ComsolFields fem;
+  fem.setBias(bias); // set first
+  fem.read_fields(fieldName); /// then read and prepare
 
+  Fields field;
+  field.prepare_fields(fem);
+  
   //----------------------------------------------------------
   // Transport
   Transport* transportation = new Transport(seed);
@@ -75,10 +79,8 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------
   // transport start
   //----------------------------------------------------------
-  fem->read_fields();
-  Electrode* anode = new Electrode(fem, gmodel);
 
-  int attempts = transportation->transport(en, anode, hits);
+  int attempts = transportation->transport(gmodel, field, hits, en);
 
   std::cout << "attempt: " << attempts << " from 1000" << std::endl;
   std::cout << "Total excitation photons counted: " << transportation->getPhotons() << std::endl;
@@ -121,9 +123,7 @@ int main(int argc, char** argv) {
   ff.Close();
 
   delete transportation;
-  delete fem;
-  delete gmodel;
-  
+
   return 0;
 }
 

@@ -3,7 +3,6 @@
 
 #include <list>
 #include <vector>
-#include <array>
 // #include <mutex>
 
 // ROOT
@@ -13,6 +12,7 @@
 
 //local
 #include "electrode.hh"
+#include "pmodel.hh"
 
 using namespace ROOT::Math;
 
@@ -39,24 +39,14 @@ class Transport {
   std::vector<XYZPoint> photonStore;
   //  std::mutex mtx;
   TRandom3* rnd;
-
+  Physics_Model* pm;
+  
   // used by task function
   void book_charge(charge_t q);
   void book_photon(charge_t q);
   void addToGammas(int g);
   void addToIons(int i);
-  void find_phaseshift(double e, double* phaseshift);
   double time_update(double tau);
-  double angle_function2(double energy);
-  double cross_section(double energy, bool &momentum_flag, int &inel_flag);
-  double stauffer_elastic_cs(double energy);
-  double stauffer_momentum_cs(double energy);
-  double func_a(int l);
-  double func_b(int l);
-  double inelastic_cs(double energy);
-  double inelastic_cs_mason_newell(double energy);
-  double emp_fit(double x, double* par);
-  std::array<double,6> calc_phaseshift1to6(double energy);
   XYZVector speed_update(int charge, XYZPoint dfield, double time);
   XYZVector d_update(XYZVector v0, double time);
   XYZVector kin_factor2(XYZVector v0, bool momentum_flag);

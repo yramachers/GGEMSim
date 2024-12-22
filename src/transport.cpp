@@ -16,24 +16,18 @@
 //*******
 // Transport
 //*******
-Transport::Transport(int seed) {
+Transport::Transport() {
   photon_number = 0;
   ion_number = 0;
   density = 1.6903; // [kg/m^3] fix NTP (295K) argon gas density
   charges.clear();
   chargeStore.clear();
   photonStore.clear();
-  rnd = new TRandom3(seed);
-}
-
-
-Transport::~Transport() {
-  delete rnd;
 }
 
 
 // calculate a signal on electrode for any charges in region of interest
-int Transport::transport(GeometryModel& gm, Fields& fd, std::list<charge_t>& q, double energy) {
+int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<charge_t>& q, double energy) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
@@ -51,7 +45,7 @@ int Transport::transport(GeometryModel& gm, Fields& fd, std::list<charge_t>& q, 
   }
   
   int counter = 0;
-  while (!run(gm, fd, energy, nthreads) && counter<5) { // runs first charge
+  while (!run(gm, fd, rnd, energy, nthreads) && counter<5) { // runs first charge
   // next attempt with initial charge
     charges.clear();
     for (charge_t cc : q) {
@@ -63,7 +57,7 @@ int Transport::transport(GeometryModel& gm, Fields& fd, std::list<charge_t>& q, 
 }
 
 
-bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double en) {
+bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charge_t q, double en) {
   // have a charge and info about all fields for each thread
 
   //Init
@@ -101,7 +95,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double e
   // speed vector init/ positive z-direction
   init_energy = 1.e-9 * en; // [GeV] 
   speed_start = TMath::Sqrt(2.0*init_energy / e_mass * c2);
-  tangle = TMath::Pi()*rnd->Uniform(0.01,0.49);// isotropic, not full pi
+  tangle = TMath::Pi()*rnd.Uniform(0.01,0.49);// isotropic, not full pi
   speed.SetX(speed_start*TMath::Cos(tangle));
   speed.SetY(0.0);
   speed.SetZ(speed_start*TMath::Sin(tangle));
@@ -129,7 +123,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double e
   while (!analytic) { 
     //    check++;
     // prepare and update
-    time_step = time_update(tau);
+    time_step = -tau * TMath::Log(rnd.Rndm());
     running_time += time_step;
     // keep track of total time
     time_sum += time_step;
@@ -141,7 +135,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double e
     energy = 0.5*mumass_eV*speed.Mag2()/c2; // non-rel. energy in [eV]
 
     // artificially raise the cross section 
-    kv = speed.R() * pm.cross_section(energy,momentum_flag,inel_flag);
+    kv = speed.R() * pm.cross_section(rnd, energy,momentum_flag,inel_flag);
     
     // if (check%10000)
     //   std::cout << " while loop mod 10000 with kv = " << kv << " speed.R " << speed.R() << " cs=" <<
@@ -150,7 +144,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double e
     if (inel_flag>0) { // was ionization
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
       kv = 0.0;
-      if (rnd->Rndm()<0.1) { // 10% recombination prob
+      if (rnd.Rndm()<0.1) { // 10% recombination prob
       	analytic = true; // Stop
       }
       else { // produce an electron
@@ -181,18 +175,18 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double e
     }
     
     // random number collision decision
-    prob = rnd->Rndm();
+    prob = rnd.Rndm();
 	    
     // collision decision
     if (prob <= (kv/kmax)) {
 
       // book position of collision
-      distance_step = d_update(speed,running_time);
+      distance_step = speed * running_time;
       distance_sum += distance_step; // in [m]
       point.SetXYZ(distance_sum.X()*100.0,distance_sum.Y()*100.0,distance_sum.Z()*100.0); // [cm]
 
       // new speed from elastic collision kinematics
-      speed = kin_factor2(speed,momentum_flag);
+      speed = kin_factor2(rnd, speed,momentum_flag);
       
       // check geometry and fields
       exyz = fd.getFieldValue(gm,point,analytic);
@@ -219,7 +213,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double e
   return true;
 }
 
-bool Transport::run(GeometryModel& gm, Fields& fd, double en, int nthr) {
+bool Transport::run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int nthr) {
   //  std::vector<std::future<bool> > results; 
   //  thread_pool* pool = new thread_pool(nthr); // task pool
 
@@ -228,7 +222,7 @@ bool Transport::run(GeometryModel& gm, Fields& fd, double en, int nthr) {
 
   while (!charges.empty()) { // stop when refilling stopped
     q = charges.front(); // get front element of std::list
-    taskfunction(gm, fd, q, en);
+    taskfunction(gm, fd, rnd, q, en);
     charges.pop_front(); // remove first charge from list
     counter++; // counts tasks/electrons launched
 
@@ -291,11 +285,6 @@ void Transport::addToIons(int i) {
   return;
 }
 
-double Transport::time_update(double tau)
-{
-    return -tau*TMath::Log(rnd->Rndm());
-}
-
 XYZVector Transport::speed_update(int charge, XYZPoint dfield, double time)
 {
   XYZVector Efield(charge*dfield.x(), charge*dfield.y(), charge*dfield.z()); // in [V/m]
@@ -303,12 +292,7 @@ XYZVector Transport::speed_update(int charge, XYZPoint dfield, double time)
   return eoverm * Efield * time;
 }
 
-XYZVector Transport::d_update(XYZVector v0, double time)
-{
-    return  v0*time; // acceleration done already in speed_update
-}
-
-XYZVector Transport::kin_factor2(XYZVector v0, bool momentum_flag)
+XYZVector Transport::kin_factor2(TRandom3& rnd, XYZVector v0, bool momentum_flag)
 {
   Polar3D<double> vel(v0);
   double theta0 = v0.Theta();
@@ -321,8 +305,8 @@ XYZVector Transport::kin_factor2(XYZVector v0, bool momentum_flag)
   double mumass_eV = 1.0e9 * e_mass * argon_mass / (e_mass + argon_mass);
   
   energy = 0.5 * mumass_eV * v0.Mag2() / c2; // non-rel. energy in [eV]
-  double azimuth = TMath::TwoPi()*rnd->Rndm();
-  double theta = pm.angle_function2(energy);
+  double azimuth = TMath::TwoPi()*rnd.Rndm();
+  double theta = pm.angle_function2(rnd, energy);
   double phi = 0.5*TMath::ASin((argon_mass)/(argon_mass+ e_mass) * TMath::Sin(theta));
   transfer = TMath::Sqrt((1.0 - reduced_mass * TMath::Cos(phi)*TMath::Cos(phi)));
   

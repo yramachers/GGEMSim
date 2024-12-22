@@ -28,7 +28,7 @@ private:
   std::array<double,6> calc_phaseshift1to6(double energy);
 
   // data members
-  TRandom3* rnd;
+  //  TRandom3* rnd;
   TF1* afunc;
   TF1* inel;
   TGraph* data0;
@@ -44,8 +44,8 @@ public:
   ~Physics_Model();
 
   // interface
-  double cross_section(double energy, bool &momentum_flag, int &inel_flag);
-  double angle_function2(double energy);
+  double cross_section(TRandom3& rnd, double energy, bool &momentum_flag, int &inel_flag);
+  double angle_function2(TRandom3& rnd, double energy);
 
 };
 #endif

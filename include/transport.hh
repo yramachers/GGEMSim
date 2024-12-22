@@ -39,7 +39,7 @@ class Transport {
   std::vector<XYZPoint> chargeStore;
   std::vector<XYZPoint> photonStore;
   //  std::mutex mtx;
-  TRandom3* rnd;
+  //  TRandom3* rnd;
   Physics_Model pm;
   
   // used by task function
@@ -47,28 +47,26 @@ class Transport {
   void book_photon(charge_t q);
   void addToGammas(int g);
   void addToIons(int i);
-  double time_update(double tau);
   XYZVector speed_update(int charge, XYZPoint dfield, double time);
-  XYZVector d_update(XYZVector v0, double time);
-  XYZVector kin_factor2(XYZVector v0, bool momentum_flag);
+  XYZVector kin_factor2(TRandom3& rnd, XYZVector v0, bool momentum_flag);
 
 
  protected:
-  bool run(GeometryModel& gm, Fields& fd, double en, int nthr);
-  bool taskfunction(GeometryModel& gm, Fields& fd, charge_t q, double en);
+  bool run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int nthr);
+  bool taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charge_t q, double en);
 
  public:
   // Constructor
-  Transport(int seed);
+  Transport();
   
   // Default destructor
-  ~Transport();
+  ~Transport() = default;
 
   // Methods
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(GeometryModel& gm, Fields& fd, std::list<charge_t>& q, double energy); 
+  int transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<charge_t>& q, double energy); 
 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}

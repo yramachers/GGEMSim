@@ -17,6 +17,7 @@
 #include "TFile.h"
 #include "TNtuple.h"
 #include "TParameter.h"
+#include "TRandom3.h"
 
 
 int main(int argc, char** argv) {
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
   CLI11_PARSE(app, argc, argv);
 
   //run the code
+  TRandom3 rnd(seed); // one global rnd
   XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
   
   charge_t hit;
@@ -54,7 +56,7 @@ int main(int argc, char** argv) {
   hit.charge = qq;
   hit.chargeID = 0;
   std::list<charge_t> hits;
-  hits.push_back(hit); // let's have the one
+  hits.push_front(hit); // let's have the one
 
   //----------------------------------------------------------
   // Geometry
@@ -69,22 +71,21 @@ int main(int argc, char** argv) {
   fem.read_fields(fieldName); /// then read and prepare
 
   Fields field;
-  field.prepare_fields(fem);
+  field.prepare_fields(fem); // clears fem vectors at end
   
   //----------------------------------------------------------
   // Transport
-  Transport* transportation = new Transport(seed);
-  // setting up
+  Transport transportation;
 
   //----------------------------------------------------------
   // transport start
   //----------------------------------------------------------
 
-  int attempts = transportation->transport(gmodel, field, hits, en);
+  int attempts = transportation.transport(gmodel, field, rnd, hits, en);
 
   std::cout << "attempt: " << attempts << " from 1000" << std::endl;
-  std::cout << "Total excitation photons counted: " << transportation->getPhotons() << std::endl;
-  std::cout << "Total ionization electrons counted: " << transportation->getIons() << std::endl;
+  std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;
+  std::cout << "Total ionization electrons counted: " << transportation.getIons() << std::endl;
 
   //----------------------------------------------------------
   // to storage
@@ -99,8 +100,8 @@ int main(int argc, char** argv) {
   TFile ff(outputFileName.data(),"RECREATE");
   TNtuple* ntcharge = new TNtuple("charge","Ionization charge locations","cx:cy:cz");
   TNtuple* ntgamma = new TNtuple("gamma","photon locations","px:py:pz");
-  std::vector<XYZPoint> ac = transportation->allcharges();
-  std::vector<XYZPoint> ap = transportation->allphotons();
+  std::vector<XYZPoint> ac = transportation.allcharges();
+  std::vector<XYZPoint> ap = transportation.allphotons();
   for (unsigned int i=0;i<ac.size();i++)
     ntcharge->Fill(ac.at(i).x(),ac.at(i).y(),ac.at(i).z());
   for (unsigned int i=0;i<ap.size();i++)
@@ -121,8 +122,6 @@ int main(int argc, char** argv) {
   ntcharge->Write();
   ntgamma->Write();
   ff.Close();
-
-  delete transportation;
 
   return 0;
 }

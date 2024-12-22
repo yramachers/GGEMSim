@@ -46,6 +46,13 @@ void ComsolFields::read_fields(std::string fn) {
 }
 
 
+void ComsolFields::clear()
+{
+  coords.clear();
+  dmap.clear();  
+}
+
+
 // Fields class
 Fields::~Fields() {
   if (allx) { // all set together
@@ -89,7 +96,7 @@ void Fields::prepare_fields(ComsolFields& fem) {
   }  
   //  std::cout << "in Fields::prepare fields finished." << std::endl;
   // all done and in memory
-
+  fem.clear();
 }
 
 

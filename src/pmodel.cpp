@@ -7,7 +7,7 @@ Physics_Model::Physics_Model() {
   // local declarations
   double dcs(double* x, double* par);
   double inelsum(double* x, double* par);
-  rnd = new TRandom3(0);
+
   afunc = new TF1("name",dcs,0.0,TMath::Pi(),5);
   inel  = new TF1("inelsum",inelsum,11.55,50.0,4);
 
@@ -19,8 +19,8 @@ Physics_Model::Physics_Model() {
   double energy[11] = {0.02,0.06,0.1,0.2,0.3,0.4,0.5,0.7,1.0,2.0,3.0};
   double values[44] = {4.426e-2,3.092e-3,5.836e-4,1.537e-4,5.363e-2,8.155e-3,1.577e-3,5.21e-4,5.133e-2,1.219e-2,2.686e-3,8.937e-4,3.255e-2,1.93e-2,5.516e-3,1.831e-3,8.595e-3,2.307e-2,8.379e-3,2.756e-3,-1.639e-2,2.46e-2,1.128e-2,3.667e-3,-4.122e-2,2.444e-2,1.419e-2,4.574e-3,-8.931e-2,2.04e-2,2.016e-2,6.374e-3,-1.566e-1,8.199e-3,2.927e-2,9.059e-3,-3.48e-1,-5.612e-3,6.446e-2,1.788e-2,-5.057e-1,-1.329e-1,1.111e-1,2.669e-2};
     
-  Int_t m = 11, n = 4;
-  Int_t i;
+  int m = 11, n = 4;
+  int i;
   for (i=0;i<m;i++) {
     data0->SetPoint(i,energy[i],values[i*n]);
     data1->SetPoint(i,energy[i],values[1+i*n]);
@@ -32,7 +32,6 @@ Physics_Model::Physics_Model() {
 
 
 Physics_Model::~Physics_Model() {
-  delete rnd;
   delete afunc;
   delete inel;
   delete data0;
@@ -45,11 +44,11 @@ Physics_Model::~Physics_Model() {
 //****************************
 // theory from JPhysB16,4023
 //****************************
-double Physics_Model::angle_function2(double energy)
+double Physics_Model::angle_function2(TRandom3& rnd, double energy)
 {
   //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   if (energy <= 0.02) // trial correction
-    return TMath::Pi()*rnd->Rndm();//isotropic for <0.02 eV
+    return TMath::Pi()*rnd.Rndm();//isotropic for <0.02 eV
   double p[5];
   double phaseshift[4];
   find_phaseshift(energy,phaseshift);
@@ -117,7 +116,7 @@ void Physics_Model::find_phaseshift(double e, double* phaseshift)
 
 
 // check new cross sections better than Eachran, Stauffer (1983)
-double Physics_Model::cross_section(double energy, bool &momentum_flag, int &inel_flag)
+double Physics_Model::cross_section(TRandom3& rnd, double energy, bool &momentum_flag, int &inel_flag)
 {
   double cs_el, cs_inel,ratio;
   double cs_etrans;
@@ -136,7 +135,7 @@ double Physics_Model::cross_section(double energy, bool &momentum_flag, int &ine
       cs_ptrans *= 0.73;
       cs_etrans *= 0.73;
     }
-    if (rnd->Rndm() <  ratio) momentum_flag = kTRUE;
+    if (rnd.Rndm() <  ratio) momentum_flag = kTRUE;
     else momentum_flag = kFALSE; // energy transfer cs
     return (momentum_flag ? cs_ptrans : cs_etrans);
   }
@@ -146,7 +145,7 @@ double Physics_Model::cross_section(double energy, bool &momentum_flag, int &ine
     cs_el = stauffer_elastic_cs(energy);
     cs_inel = inelastic_cs(energy);
     ratio = cs_inel / (cs_el+cs_inel);
-    if (rnd->Rndm() < ratio) {
+    if (rnd.Rndm() < ratio) {
       inel_flag = -1; // photon
       if (energy > 15.76) inel_flag = 1; // electron
       //      std::cout << " inelastic sigma = " << cs_inel << " ratio = " << ratio << std::endl;
@@ -154,7 +153,7 @@ double Physics_Model::cross_section(double energy, bool &momentum_flag, int &ine
     }
     // elastic as normal
     ratio = cs_ptrans / cs_el;
-    if (rnd->Rndm() <  ratio) momentum_flag = kTRUE;
+    if (rnd.Rndm() <  ratio) momentum_flag = kTRUE;
     else momentum_flag = kFALSE; // energy transfer cs
     return (momentum_flag ? cs_ptrans+cs_inel : cs_el+cs_inel);
   }

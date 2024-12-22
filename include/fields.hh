@@ -37,6 +37,7 @@ class ComsolFields {
   // Methods
   void read_fields(std::string fname);
   void setBias(double b) {bias = b;};
+  void clear();
   std::vector<XYZPoint> positions() {return coords;}
   std::vector<XYZPoint> driftmap() {return dmap;}
 };

@@ -4,11 +4,12 @@
 #include "TMath.h"
 
 Physics_Model::Physics_Model() {
+  generator.seed(rd()); // use random seed
+  
   // local declarations
-  double dcs(double* x, double* par);
   double inelsum(double* x, double* par);
 
-  afunc = new TF1("name",dcs,0.0,TMath::Pi(),5);
+  //  afunc = new TF1("name",dcs,0.0,TMath::Pi(),5);
   inel  = new TF1("inelsum",inelsum,11.55,50.0,4);
 
   // phaseshift calculation, set interpolator data
@@ -32,7 +33,7 @@ Physics_Model::Physics_Model() {
 
 
 Physics_Model::~Physics_Model() {
-  delete afunc;
+  //  delete afunc;
   delete inel;
   delete data0;
   delete data1;
@@ -44,8 +45,10 @@ Physics_Model::~Physics_Model() {
 //****************************
 // theory from JPhysB16,4023
 //****************************
-double Physics_Model::angle_function2(TRandom3& rnd, double energy)
+double Physics_Model::angle_function(TRandom3& rnd, double energy)
 {
+  using pld_type = std::piecewise_linear_distribution<double>;
+
   //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   if (energy <= 0.02) // trial correction
     return TMath::Pi()*rnd.Rndm();//isotropic for <0.02 eV
@@ -57,51 +60,12 @@ double Physics_Model::angle_function2(TRandom3& rnd, double energy)
   for (Int_t i=0;i<4;i++) {
     p[i+1] = phaseshift[i];
   }
-  afunc->SetParameters(p);
-  double theta = afunc->GetRandom();
+  pld_type adist(360,0.0,TMath::Pi(),angleFunction(p)); // unary functor in header
+  double theta = adist(generator); // random angle theta
+  //  afunc->SetParameters(p);
+  //  double theta = afunc->GetRandom();
   //  cout << "theta=" << theta << " at [eV] " << energy << endl;
   return theta;
-}
-
-double dcs(double* x, double* par)
-{
-  double xx = TMath::Cos(x[0]);
-  double k = TMath::Sqrt(par[0]/13.605); // units of 1/a0
-  double eta0 = par[1];
-  double eta1 = par[2];
-  double eta2 = par[3];
-  double eta3 = par[4];
-
-  double sum1 = 0.0;
-  double sum2 = 0.0;
-  double p0 = 1.0;
-  double p1 = xx;
-  double p2 = 0.5*(3.0*xx*xx - 1.0);
-  double p3 = 0.5*(5.0*xx*xx*xx - 3.0*xx);
-  double alpha = 11.08; // units of a0^3
-  double dummy1, dummy2, result;
-  
-  sum1 += TMath::Cos(eta0)*TMath::Sin(eta0)*p0;
-  sum1 += 3.0*TMath::Cos(eta1)*TMath::Sin(eta1)*p1;
-  sum1 += 5.0*TMath::Cos(eta2)*TMath::Sin(eta2)*p2;
-  sum1 += 7.0*TMath::Cos(eta3)*TMath::Sin(eta3)*p3;
-  dummy1 = 1/k * sum1;
-
-  sum2 += p1/5.0;
-  sum2 += p2/21.0;
-  sum2 += p3/45.0;
-  dummy2 = TMath::Pi()*alpha*k*(1.0/3.0 -  0.5*TMath::Sin(x[0]/2.0) - sum2);
-  dummy1 += dummy2;
-
-  sum1 = 0.0;
-  sum1 += TMath::Sin(eta0)*TMath::Sin(eta0)*p0;
-  sum1 += 3.0*TMath::Sin(eta1)*TMath::Sin(eta1)*p1;
-  sum1 += 5.0*TMath::Sin(eta2)*TMath::Sin(eta2)*p2;
-  sum1 += 7.0*TMath::Sin(eta3)*TMath::Sin(eta3)*p3;
-  dummy2 = 1/k * sum1;
-
-  result = dummy1*dummy1 + dummy2*dummy2;
-  return result*2.80028561e-21; // convert from Bohr radius^2 to SI
 }
 
 void Physics_Model::find_phaseshift(double e, double* phaseshift)
@@ -313,3 +277,5 @@ double Physics_Model::emp_fit(double x, double* par)
     // pol6 fits by 190.0/20 chi2/ndf up to 50 eV, not further
     return par[0]+par[1]*x+par[2]*x*x+par[3]*x*x*x+par[4]*x*x*x*x+par[5]*x*x*x*x*x+par[6]*x*x*x*x*x*x;
 }
+
+

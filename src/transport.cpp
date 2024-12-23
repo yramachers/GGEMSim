@@ -180,8 +180,8 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
       // memory check, simple replacement code segment
       Polar3D<double> vel(speed);
       double azimuth = TMath::TwoPi()*rnd.Rndm();
-      //      double theta = pm.angle_function2(rnd, energy); // memory leak here? Looks like it + slow-down
-      double theta = TMath::Pi()*rnd.Rndm()/2.0; // wrong, removed pm call
+      double theta = pm.angle_function(rnd, energy); // memory leak here? Looks like it + slow-down
+      //      double theta = TMath::Pi()*rnd.Rndm()/2.0; // wrong, removed pm call
       double reduced_mass = (4.0*argon_mass*e_mass)/((argon_mass + e_mass)*(argon_mass + e_mass));
       double transfer = TMath::Sqrt((1.0 - reduced_mass)); // sort of
       if (momentum_flag) {
@@ -305,7 +305,7 @@ void Transport::kin_factor2(TRandom3& rnd, XYZVector& v0, bool momentum_flag)
   
   energy = 0.5 * mumass_eV * v0.Mag2() / c2; // non-rel. energy in [eV]
   double azimuth = TMath::TwoPi()*rnd.Rndm();
-  double theta = pm.angle_function2(rnd, energy);
+  double theta = pm.angle_function(rnd, energy);
   double phi = 0.5*TMath::ASin((argon_mass)/(argon_mass+ e_mass) * TMath::Sin(theta));
   transfer = TMath::Sqrt((1.0 - reduced_mass * TMath::Cos(phi)*TMath::Cos(phi)));
   

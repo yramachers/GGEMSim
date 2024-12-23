@@ -27,7 +27,7 @@ Transport::Transport() {
 
 
 // calculate a signal on electrode for any charges in region of interest
-int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<charge_t>& q, double energy) {
+int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<XYZPoint>& q, double energy) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
@@ -40,7 +40,7 @@ int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list
 
   // got all charges as initial input
   charges.clear(); // copy to data member
-  for (charge_t cc : q) {
+  for (XYZPoint cc : q) {
     charges.push_front(cc); // insert from front
   }
   
@@ -48,7 +48,7 @@ int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list
   while (!run(gm, fd, rnd, energy, nthreads) && counter<5) { // runs first charge
   // next attempt with initial charge
     charges.clear();
-    for (charge_t cc : q) {
+    for (XYZPoint cc : q) {
       charges.push_front(cc); // insert from front
     }
     counter++;
@@ -57,12 +57,25 @@ int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list
 }
 
 
-bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charge_t q, double en) {
+bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPoint point, double en) {
   // have a charge and info about all fields for each thread
 
-  //Init
+  //Init, local storage
   XYZVector speed;
+  XYZVector distance_sum, distance_step;
+  XYZPoint exyz; // Drift field
+
   double energy;
+  double prob;
+  double time_step, running_time;
+  double init_energy;
+  double speed_start, tangle;
+  double kv;
+  double x, y, z;
+  double xe, ye, ze;
+  double csection;
+
+  // init constants
   double c2 = 2.99792458e8*2.99792458e8; // c^2 [m/s]^2
   double time_sum = 0.0;
   bool momentum_flag = kTRUE;
@@ -71,25 +84,16 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charg
   int ion_counter = 0;
   int check = 0;
   
-  XYZVector distance_sum, distance_step;
-
   distance_step.SetXYZ(0.0,0.0,0.0);
   speed.SetXYZ(0.0,0.0,0.0);
   
   double e_mass = 0.511e-3; // [GeV/c^2]
   double argon_mass = 39.948*1.0735; // [GeV/c^2]
   double mumass_eV = 1.0e9 * e_mass * argon_mass / (e_mass + argon_mass);
-  double prob;
   double localdensity = density * 6.023e26 / 39.948;// convert to number density [m^-3]
   // for E=2.12e8, gives E/N = 10Td = 1.e-16 Vcm^2
-  
-  double time_step, running_time;
   double kmax = 2.e-12; // constant for null coll. method
-  double kv;
   double tau = 1/(localdensity * kmax);
-  
-  double init_energy;
-  double speed_start, tangle;
   bool stopflag = kFALSE; 
 
   // speed vector init/ positive z-direction
@@ -102,21 +106,10 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charg
   
   time_sum = running_time = 0.0;
 
-  double x, y, z;
-  double xe, ye, ze;
-  int elcharge;
-  XYZPoint exyz; // Drift field
-  XYZPoint point;
   bool analytic = false; // default False
-
-  point = q.location; // start location, XYZPoint object; [cm] from ROOT
 
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
-
-  elcharge = q.charge; // -1: e-
-  charge_t cc;
-
   exyz = fd.getFieldValue(gm,point,analytic); // [V/m]
 
   // transport loop
@@ -124,18 +117,19 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charg
     //    check++;
     // prepare and update
     time_step = -tau * TMath::Log(rnd.Rndm());
+    // free-flight time
     running_time += time_step;
     // keep track of total time
     time_sum += time_step;
 
     // vector addition stepwise turns velocity vector
-    speed += speed_update(elcharge,exyz,time_step);
+    speed_update(exyz,time_step, speed); // in-place update
     
     // CMS system energy
     energy = 0.5*mumass_eV*speed.Mag2()/c2; // non-rel. energy in [eV]
 
-    // artificially raise the cross section 
-    kv = speed.R() * pm.cross_section(rnd, energy,momentum_flag,inel_flag);
+    csection = pm.cross_section(rnd, energy, momentum_flag, inel_flag); // local storage
+    kv = speed.R() * csection;
     
     // if (check%10000)
     //   std::cout << " while loop mod 10000 with kv = " << kv << " speed.R " << speed.R() << " cs=" <<
@@ -148,10 +142,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charg
       	analytic = true; // Stop
       }
       else { // produce an electron
-      	cc.location = point; // last known collision location
-	cc.chargeID = 1; // was an electron
-	cc.charge = -1; //
-	book_charge(cc); // store in object container
+	book_charge(point); // store in object container
 	ion_counter++;
 	std::cout << "inelastic collision electron booked at energy " << energy << std::endl;
 	std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
@@ -160,10 +151,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charg
     else if (inel_flag<0) { // was excitation
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
       kv = 0.0;
-      cc.location = point; // last known collision location
-      cc.chargeID = 1; // was an electron
-      cc.charge = -1; //
-      book_photon(cc); // store in object container
+      book_photon(point); // store in object container
       photon_counter++; // count photons
       std::cout << "inelastic collision photon booked at energy " << energy << std::endl;
       std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
@@ -183,10 +171,10 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charg
       // book position of collision
       distance_step = speed * running_time;
       distance_sum += distance_step; // in [m]
-      point.SetXYZ(distance_sum.X()*100.0,distance_sum.Y()*100.0,distance_sum.Z()*100.0); // [cm]
+      point.SetXYZ(distance_sum.x()*100.0,distance_sum.y()*100.0,distance_sum.z()*100.0); // [cm]
 
       // new speed from elastic collision kinematics
-      speed = kin_factor2(rnd, speed,momentum_flag);
+      kin_factor2(rnd, speed, momentum_flag);
       
       // check geometry and fields
       exyz = fd.getFieldValue(gm,point,analytic);
@@ -217,7 +205,7 @@ bool Transport::run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int
   //  std::vector<std::future<bool> > results; 
   //  thread_pool* pool = new thread_pool(nthr); // task pool
 
-  charge_t q;
+  XYZPoint q;
   int counter = 0;
 
   while (!charges.empty()) { // stop when refilling stopped
@@ -257,17 +245,17 @@ bool Transport::run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int
 }
 
 
-void Transport::book_charge(charge_t q) {
+void Transport::book_charge(XYZPoint q) {
   //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   charges.push_back(q); // total charge list to be filled/drained in threads
-  chargeStore.push_back(q.location); // permanent storage
+  chargeStore.push_back(q); // permanent storage
   return;
 }
 
 
-void Transport::book_photon(charge_t q) {
+void Transport::book_photon(XYZPoint q) {
   //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
-  photonStore.push_back(q.location); // permanent storage
+  photonStore.push_back(q); // permanent storage
   return;
 }
 
@@ -285,14 +273,15 @@ void Transport::addToIons(int i) {
   return;
 }
 
-XYZVector Transport::speed_update(int charge, XYZPoint dfield, double time)
+void Transport::speed_update(XYZPoint& dfield, double time, XYZVector& out)
 {
+  int charge = -1;
   XYZVector Efield(charge*dfield.x(), charge*dfield.y(), charge*dfield.z()); // in [V/m]
   double eoverm = 1.759e11; // Coulomb / kg
-  return eoverm * Efield * time;
+  out += eoverm * Efield * time; // in-place update
 }
 
-XYZVector Transport::kin_factor2(TRandom3& rnd, XYZVector v0, bool momentum_flag)
+void Transport::kin_factor2(TRandom3& rnd, XYZVector& v0, bool momentum_flag)
 {
   Polar3D<double> vel(v0);
   double theta0 = v0.Theta();
@@ -313,12 +302,10 @@ XYZVector Transport::kin_factor2(TRandom3& rnd, XYZVector v0, bool momentum_flag
   if (momentum_flag) {
     vel.SetTheta(theta+theta0); // relative to old theta
     vel.SetPhi(azimuth+phi0);
-    XYZVector res(vel);
-    return res; // return XYZVector type
   }
   else {
     vel.SetR(vel.R() * transfer); // magnitude change
-    XYZVector res(vel);
-    return res;
   }
+  XYZVector res(vel);
+  v0 = res; // in-place update
 }

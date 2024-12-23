@@ -49,14 +49,8 @@ int main(int argc, char** argv) {
   //run the code
   TRandom3 rnd(seed); // one global rnd
   XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
-  
-  charge_t hit;
-  double qq = -1.0; // [e]
-  hit.location = loc;
-  hit.charge = qq;
-  hit.chargeID = 0;
-  std::list<charge_t> hits;
-  hits.push_front(hit); // let's have the one
+  std::list<XYZPoint> hits;
+  hits.push_front(loc); // let's have the one
 
   //----------------------------------------------------------
   // Geometry

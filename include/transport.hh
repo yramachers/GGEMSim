@@ -17,14 +17,6 @@
 
 using namespace ROOT::Math;
 
-// helper struct
-struct charge_t {
-  XYZPoint location;
-  double charge;
-  int chargeID; // distinguish e- (1) and gamma (0)
-};
-
-
 //***********************************
 // Charge signal class
 // to be used as an interface
@@ -35,7 +27,7 @@ class Transport {
   int photon_number;
   int ion_number;
   double density;
-  std::list<charge_t> charges;
+  std::list<XYZPoint> charges;
   std::vector<XYZPoint> chargeStore;
   std::vector<XYZPoint> photonStore;
   //  std::mutex mtx;
@@ -43,17 +35,17 @@ class Transport {
   Physics_Model pm;
   
   // used by task function
-  void book_charge(charge_t q);
-  void book_photon(charge_t q);
+  void book_charge(XYZPoint q);
+  void book_photon(XYZPoint q);
   void addToGammas(int g);
   void addToIons(int i);
-  XYZVector speed_update(int charge, XYZPoint dfield, double time);
-  XYZVector kin_factor2(TRandom3& rnd, XYZVector v0, bool momentum_flag);
+  void speed_update(XYZPoint& dfield, double time, XYZVector& out);
+  void kin_factor2(TRandom3& rnd, XYZVector& v0, bool momentum_flag);
 
 
  protected:
   bool run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int nthr);
-  bool taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, charge_t q, double en);
+  bool taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPoint q, double en);
 
  public:
   // Constructor
@@ -66,7 +58,7 @@ class Transport {
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<charge_t>& q, double energy); 
+  int transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<XYZPoint>& q, double energy); 
 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}

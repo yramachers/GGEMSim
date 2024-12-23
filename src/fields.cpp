@@ -10,21 +10,15 @@
 #include "Math/Vector3D.h"
 
 
-
-ComsolFields::ComsolFields(std::string fn) : fname(fn)
-{
-  bias = 1.0;
+// come now as 2D data in x,y from comsol
+void ComsolFields::read_fields(std::string fn) {
   coords.clear();
   dmap.clear();
-}
-
-
-// come now as 2D data in x,y from comsol
-void ComsolFields::read_fields() {
+  
   XYZPoint p;
   XYZPoint pe;
 
-  TFile* ffd = new TFile(fname.data(),"read");
+  TFile* ffd = new TFile(fn.data(),"read");
   TNtupleD* ntd = (TNtupleD*)ffd->Get("weighting");
   int entries = ntd->GetEntries();
 
@@ -52,18 +46,14 @@ void ComsolFields::read_fields() {
 }
 
 
-Fields::Fields(ComsolFields* fem, GeometryModel* g)
+void ComsolFields::clear()
 {
-  gm = g; // have access to geometry model
-
-  allx = 0; // null ptr
-  allz = 0;
-  alldx = 0;
-  alldz = 0;
-  
-  prepare_fields(fem);
+  coords.clear();
+  dmap.clear();  
 }
 
+
+// Fields class
 Fields::~Fields() {
   if (allx) { // all set together
     delete [] allx ;
@@ -74,8 +64,8 @@ Fields::~Fields() {
   if (coordinates) delete coordinates;
 }
 
-void Fields::prepare_fields(ComsolFields* fem) {
-  std::vector<XYZPoint> cdata = fem->positions();
+void Fields::prepare_fields(ComsolFields& fem) {
+  std::vector<XYZPoint> cdata = fem.positions();
   int nentries = cdata.size();
   //  std::cout << "in Fields::prepare fields." << std::endl;
 
@@ -99,27 +89,18 @@ void Fields::prepare_fields(ComsolFields* fem) {
   alldz = new double [nentries];
 
   // no scaling if Comsol fields are at 500V/cm
-  std::vector<XYZPoint> ddata = fem->driftmap();
+  std::vector<XYZPoint> ddata = fem.driftmap();
   for (int i=0;i<nentries;i++){
     alldx[i] = ddata[i].x();
     alldz[i] = ddata[i].z();
   }  
   //  std::cout << "in Fields::prepare fields finished." << std::endl;
   // all done and in memory
-
+  fem.clear();
 }
 
 
-
-
-XYZPoint Fields::getDriftField(XYZPoint& p, bool& analytic) {
-  XYZPoint triplet = getFieldValue(p, analytic);
-  return triplet;
-}
-
-
-
-XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic) {
+XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic) {
 
   // common routine to ask for field value
   // bool drift decides between Drift field: drift=True
@@ -129,16 +110,16 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic) {
   double xv = p.x();
   double yv = p.y();
   double zv = p.z();
-  double rad = TMath::Sqrt(xv*xv+yv*yv);
-  double angle = TMath::ATan2(yv,xv);
-  int value = gm->whereami(xv,yv,zv);
+  double rad = TMath::Sqrt(xv*xv+yv*yv); // x-y-plane
+  double angle = TMath::ATan2(yv,xv); // x-y-plane
+  int value = gm.whereami(xv,yv,zv);
   //  std::cout << "in Fields::answer to whereami: " << value << std::endl;
   XYZPoint triplet;
   
   if (value==1) { // comsol region
     double point[2];
-    double dist[8]; // check on nearest 8 neighbours in grid
-    int indx[8];
+    double dist[4]; // check on nearest 4 neighbours in grid
+    int indx[4];
     
     XYZVector fieldvec;
     XYZVector sumvec;
@@ -150,8 +131,8 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic) {
 
     //    std::cout << "in Fields: point coordinates " << xv << " " << yv << " " << zv << std::endl;
         
-    coordinates->FindNearestNeighbors(point,8,indx,dist);
-    for (int j=0;j<8;j++) {
+    coordinates->FindNearestNeighbors(point,4,indx,dist);
+    for (int j=0;j<4;j++) {
       fieldvec.SetXYZ(alldx[indx[j]], 0.0, alldz[indx[j]]);
       // 	std::cout << "in Fields: nearest coords: " << allx[indx[j]] << " " << ally[indx[j]] << " " << allz[indx[j]] << std::endl;
       // 	std::cout << "in Fields: Drift field value: " << alldx[indx[j]] << " " << alldy[indx[j]] << " " << alldz[indx[j]] << std::endl;
@@ -160,10 +141,10 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic) {
     }
 
     double denom = 0.0;
-    for (int j=0;j<8;j++) denom += (1.0-dist[j]/dsum);
+    for (int j=0;j<4;j++) denom += (1.0-dist[j]/dsum);
     
     sumvec.SetXYZ(0.,0.,0.);
-    for (int j=0;j<8;j++) {
+    for (int j=0;j<4;j++) {
       fieldvec = nnvec.at(j)*((1.0-dist[j]/dsum)/denom);
       sumvec += fieldvec;
     }
@@ -171,14 +152,13 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic) {
     triplet.SetXYZ(sumvec.X()*fabs(TMath::Cos(angle)),sumvec.X()*fabs(TMath::Sin(angle)),sumvec.Z());
 //     std::cout << "in Fields: point coordinates " << xv << " " << yv << " " << zv << std::endl;
 //     std::cout << "in Fields: average field value " << sumvec.X() << " " << sumvec.Y() << " " << sumvec.Z() << std::endl;
-    
-    return triplet;
+    nnvec.clear();
   }
   else {
     // outside anything relevant, stop transport.
     triplet.SetXYZ(-1.0,0.0,0.0);
     analytic = true; // trigger to stop
-    return triplet;
   }
+  return triplet;
   
 }

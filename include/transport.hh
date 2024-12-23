@@ -39,7 +39,6 @@ class Transport {
   void book_photon(XYZPoint q);
   void addToGammas(int g);
   void addToIons(int i);
-  void speed_update(XYZPoint& dfield, double time, XYZVector& out);
   void kin_factor2(TRandom3& rnd, XYZVector& v0, bool momentum_flag);
 
 

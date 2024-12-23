@@ -77,6 +77,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
 
   // init constants
   double c2 = 2.99792458e8*2.99792458e8; // c^2 [m/s]^2
+  double eoverm = 1.759e11; // Coulomb / kg
   double time_sum = 0.0;
   bool momentum_flag = kTRUE;
   int inel_flag = 0;
@@ -123,8 +124,9 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
     time_sum += time_step;
 
     // vector addition stepwise turns velocity vector
-    speed_update(exyz,time_step, speed); // in-place update
-    
+    XYZVector Efield(-1*exyz.x(), -1*exyz.y(), -1*exyz.z()); // in [V/m]
+    speed += eoverm * Efield * time_step; // in-place update
+
     // CMS system energy
     energy = 0.5*mumass_eV*speed.Mag2()/c2; // non-rel. energy in [eV]
 
@@ -174,7 +176,23 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
       point.SetXYZ(distance_sum.x()*100.0,distance_sum.y()*100.0,distance_sum.z()*100.0); // [cm]
 
       // new speed from elastic collision kinematics
-      kin_factor2(rnd, speed, momentum_flag);
+      //      kin_factor2(rnd, speed, momentum_flag);
+      // memory check, simple replacement code segment
+      Polar3D<double> vel(speed);
+      double azimuth = TMath::TwoPi()*rnd.Rndm();
+      //      double theta = pm.angle_function2(rnd, energy); // memory leak here? Looks like it + slow-down
+      double theta = TMath::Pi()*rnd.Rndm()/2.0; // wrong, removed pm call
+      double reduced_mass = (4.0*argon_mass*e_mass)/((argon_mass + e_mass)*(argon_mass + e_mass));
+      double transfer = TMath::Sqrt((1.0 - reduced_mass)); // sort of
+      if (momentum_flag) {
+	vel.SetTheta(theta + speed.Theta()); // relative to old theta
+	vel.SetPhi(azimuth + speed.Phi());
+      }
+      else {
+	vel.SetR(speed.R() * transfer); // magnitude change
+      }
+      XYZVector dummy(vel);
+      speed = dummy;
       
       // check geometry and fields
       exyz = fd.getFieldValue(gm,point,analytic);
@@ -271,14 +289,6 @@ void Transport::addToIons(int i) {
   //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   ion_number += i;
   return;
-}
-
-void Transport::speed_update(XYZPoint& dfield, double time, XYZVector& out)
-{
-  int charge = -1;
-  XYZVector Efield(charge*dfield.x(), charge*dfield.y(), charge*dfield.z()); // in [V/m]
-  double eoverm = 1.759e11; // Coulomb / kg
-  out += eoverm * Efield * time; // in-place update
 }
 
 void Transport::kin_factor2(TRandom3& rnd, XYZVector& v0, bool momentum_flag)

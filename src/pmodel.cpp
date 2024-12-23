@@ -8,8 +8,6 @@ Physics_Model::Physics_Model() {
   
   // local declarations
   double inelsum(double* x, double* par);
-
-  //  afunc = new TF1("name",dcs,0.0,TMath::Pi(),5);
   inel  = new TF1("inelsum",inelsum,11.55,50.0,4);
 
   // phaseshift calculation, set interpolator data
@@ -33,7 +31,6 @@ Physics_Model::Physics_Model() {
 
 
 Physics_Model::~Physics_Model() {
-  //  delete afunc;
   delete inel;
   delete data0;
   delete data1;
@@ -62,8 +59,6 @@ double Physics_Model::angle_function(TRandom3& rnd, double energy)
   }
   pld_type adist(360,0.0,TMath::Pi(),angleFunction(p)); // unary functor in header
   double theta = adist(generator); // random angle theta
-  //  afunc->SetParameters(p);
-  //  double theta = afunc->GetRandom();
   //  cout << "theta=" << theta << " at [eV] " << energy << endl;
   return theta;
 }

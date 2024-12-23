@@ -29,7 +29,6 @@ private:
   std::array<double,6> calc_phaseshift1to6(double energy);
 
   // data members
-  //  TRandom3* rnd;
   TF1* inel;
   TGraph* data0;
   TGraph* data1;

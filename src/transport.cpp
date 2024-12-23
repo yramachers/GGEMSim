@@ -83,7 +83,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
   int inel_flag = 0;
   int photon_counter = 0;
   int ion_counter = 0;
-  int check = 0;
+  //  int check = 0;
   
   distance_step.SetXYZ(0.0,0.0,0.0);
   speed.SetXYZ(0.0,0.0,0.0);
@@ -146,8 +146,8 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
       else { // produce an electron
 	book_charge(point); // store in object container
 	ion_counter++;
-	std::cout << "inelastic collision electron booked at energy " << energy << std::endl;
-	std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
+	// std::cout << "inelastic collision electron booked at energy " << energy << std::endl;
+	// std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
       }
     }
     else if (inel_flag<0) { // was excitation
@@ -155,8 +155,8 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
       kv = 0.0;
       book_photon(point); // store in object container
       photon_counter++; // count photons
-      std::cout << "inelastic collision photon booked at energy " << energy << std::endl;
-      std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
+      // std::cout << "inelastic collision photon booked at energy " << energy << std::endl;
+      // std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
     }
     
     if (kv>=kmax) {
@@ -176,32 +176,16 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
       point.SetXYZ(distance_sum.x()*100.0,distance_sum.y()*100.0,distance_sum.z()*100.0); // [cm]
 
       // new speed from elastic collision kinematics
-      //      kin_factor2(rnd, speed, momentum_flag);
-      // memory check, simple replacement code segment
-      Polar3D<double> vel(speed);
-      double azimuth = TMath::TwoPi()*rnd.Rndm();
-      double theta = pm.angle_function(rnd, energy); // memory leak here? Looks like it + slow-down
-      //      double theta = TMath::Pi()*rnd.Rndm()/2.0; // wrong, removed pm call
-      double reduced_mass = (4.0*argon_mass*e_mass)/((argon_mass + e_mass)*(argon_mass + e_mass));
-      double transfer = TMath::Sqrt((1.0 - reduced_mass)); // sort of
-      if (momentum_flag) {
-	vel.SetTheta(theta + speed.Theta()); // relative to old theta
-	vel.SetPhi(azimuth + speed.Phi());
-      }
-      else {
-	vel.SetR(speed.R() * transfer); // magnitude change
-      }
-      XYZVector dummy(vel);
-      speed = dummy;
+      kin_factor(rnd, speed, momentum_flag);
       
       // check geometry and fields
       exyz = fd.getFieldValue(gm,point,analytic);
-      std::cout << "analytic bool " << analytic << std::endl;
-      std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
-      std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
+      // std::cout << "analytic bool " << analytic << std::endl;
+      // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+      // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "collision at energy " << energy << std::endl;
       //      std::cout << "speed X: " << speed.X() << " Z: " << speed.Z() << std::endl;
-      std::cout << "time between coll " << running_time << std::endl;
+      // std::cout << "time between coll " << running_time << std::endl;
 
       // reset system
       running_time = 0.0;
@@ -291,7 +275,7 @@ void Transport::addToIons(int i) {
   return;
 }
 
-void Transport::kin_factor2(TRandom3& rnd, XYZVector& v0, bool momentum_flag)
+void Transport::kin_factor(TRandom3& rnd, XYZVector& v0, bool momentum_flag)
 {
   Polar3D<double> vel(v0);
   double theta0 = v0.Theta();

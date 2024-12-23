@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 
   int attempts = transportation.transport(gmodel, field, rnd, hits, en);
 
-  std::cout << "attempt: " << attempts << " from 1000" << std::endl;
+  //  std::cout << "attempt: " << attempts << " from 1000" << std::endl;
   std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;
   std::cout << "Total ionization electrons counted: " << transportation.getIons() << std::endl;
 

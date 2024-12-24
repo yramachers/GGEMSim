@@ -1,13 +1,13 @@
 // us
 #include "transport.hh"
 
-//#include "thread_pool.hpp"
+#include "thread_pool.hpp"
 
 // standard includes
 #include <iostream>
-// #include <cmath>
-// #include <future>
-// #include <functional>
+#include <cmath>
+#include <future>
+#include <functional>
 
 // ROOT includes
 #include "TMath.h"
@@ -16,26 +16,34 @@
 //*******
 // Transport
 //*******
-Transport::Transport() {
+Transport::Transport(int seed) {
   photon_number = 0;
   ion_number = 0;
   density = 1.6903; // [kg/m^3] fix NTP (295K) argon gas density
   charges.clear();
   chargeStore.clear();
   photonStore.clear();
+
+  pm = new Physics_Model(seed+1); // seed+1 in pm
+  generator.seed(seed); // use given seed
+
+}
+
+Transport::~Transport() {
+  delete pm;
 }
 
 
 // calculate a signal on electrode for any charges in region of interest
-int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<XYZPoint>& q, double energy) {
+int Transport::transport(GeometryModel& gm, Fields& fd, std::list<XYZPoint>& q, double energy) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
     return false;
   }
 
-  //  unsigned int nthreads = std::thread::hardware_concurrency();
-  //  if (nthreads>4) nthreads = 4; // limit max CPU number
+  unsigned int nthreads = std::thread::hardware_concurrency();
+  if (nthreads>4) nthreads = 4; // limit max CPU number
   int nthreads = 1;
 
   // got all charges as initial input
@@ -45,7 +53,7 @@ int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list
   }
   
   int counter = 0;
-  while (!run(gm, fd, rnd, energy, nthreads) && counter<5) { // runs first charge
+  while (!run(gm, fd, energy, nthreads) && counter<5) { // runs first charge
   // next attempt with initial charge
     charges.clear();
     for (XYZPoint cc : q) {
@@ -57,7 +65,7 @@ int Transport::transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list
 }
 
 
-bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPoint point, double en) {
+bool Transport::taskfunction(GeometryModel& gm, Fields& fd, XYZPoint point, double en) {
   // have a charge and info about all fields for each thread
 
   //Init, local storage
@@ -100,7 +108,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
   // speed vector init/ positive z-direction
   init_energy = 1.e-9 * en; // [GeV] 
   speed_start = TMath::Sqrt(2.0*init_energy / e_mass * c2);
-  tangle = TMath::Pi()*rnd.Uniform(0.01,0.49);// isotropic, not full pi
+  tangle = TMath::Pi()*rndHalf(generator);// isotropic, not full pi
   speed.SetX(speed_start*TMath::Cos(tangle));
   speed.SetY(0.0);
   speed.SetZ(speed_start*TMath::Sin(tangle));
@@ -117,7 +125,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
   while (!analytic) { 
     //    check++;
     // prepare and update
-    time_step = -tau * TMath::Log(rnd.Rndm());
+    time_step = -tau * TMath::Log(rnd(generator));
     // free-flight time
     running_time += time_step;
     // keep track of total time
@@ -130,7 +138,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
     // CMS system energy
     energy = 0.5*mumass_eV*speed.Mag2()/c2; // non-rel. energy in [eV]
 
-    csection = pm.cross_section(rnd, energy, momentum_flag, inel_flag); // local storage
+    csection = pm->cross_section(energy, momentum_flag, inel_flag); // local storage
     kv = speed.R() * csection;
     
     // if (check%10000)
@@ -140,7 +148,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
     if (inel_flag>0) { // was ionization
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
       kv = 0.0;
-      if (rnd.Rndm()<0.1) { // 10% recombination prob
+      if (rnd(generator)<0.1) { // 10% recombination prob
       	analytic = true; // Stop
       }
       else { // produce an electron
@@ -165,7 +173,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
     }
     
     // random number collision decision
-    prob = rnd.Rndm();
+    prob = rnd(generator);
 	    
     // collision decision
     if (prob <= (kv/kmax)) {
@@ -176,7 +184,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
       point.SetXYZ(distance_sum.x()*100.0,distance_sum.y()*100.0,distance_sum.z()*100.0); // [cm]
 
       // new speed from elastic collision kinematics
-      kin_factor(rnd, speed, momentum_flag);
+      kin_factor(speed, momentum_flag);
       
       // check geometry and fields
       exyz = fd.getFieldValue(gm,point,analytic);
@@ -203,43 +211,43 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPo
   return true;
 }
 
-bool Transport::run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int nthr) {
-  //  std::vector<std::future<bool> > results; 
-  //  thread_pool* pool = new thread_pool(nthr); // task pool
+bool Transport::run(GeometryModel& gm, Fields& fd, double en, int nthr) {
+  std::vector<std::future<bool> > results; 
+  thread_pool* pool = new thread_pool(nthr); // task pool
 
   XYZPoint q;
   int counter = 0;
 
   while (!charges.empty()) { // stop when refilling stopped
     q = charges.front(); // get front element of std::list
-    taskfunction(gm, fd, rnd, q, en);
+    taskfunction(gm, fd, q, en);
     charges.pop_front(); // remove first charge from list
     counter++; // counts tasks/electrons launched
 
     //    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
 
     // empty charges and store tasks in blocks of nthreads
-    // for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
-    //   q = charges.front(); // get front element of std::list
-    //   results.push_back(pool->async(std::function<bool(Electrode*, charge_t, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), electrode, q, en)); // tasks
-    //   charges.pop_front(); // remove first charge from list
-    //   counter++; // counts tasks/electrons launched
-    // }
+    for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
+      q = charges.front(); // get front element of std::list
+      results.push_back(pool->async(std::function<bool(Electrode*, charge_t, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), electrode, q, en)); // tasks
+      charges.pop_front(); // remove first charge from list
+      counter++; // counts tasks/electrons launched
+    }
 
       //    std::future<bool> status = pool.async(std::function<bool(Electrode*, charge_t)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2)), electrode, q); // tasks in pool
     // drain task pool
-    // for (std::future<bool>& status : results) 
-    //   status.get(); // wait for completion before the next round
+    for (std::future<bool>& status : results) 
+      status.get(); // wait for completion before the next round
     
       //	counter++; // counts tasks launched
     //    }
     // all tasks from pool finished - clear it. Next batch of charges in pool.
-    //    results.clear();
+    results.clear();
   }
 
   //  std::cout << "from threads, total task counter = " << counter << std::endl;
   // charge loop finished
-  //  delete pool;
+  delete pool;
   if (getPhotons()>0 || counter>1)
     return true;
   else
@@ -248,7 +256,7 @@ bool Transport::run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int
 
 
 void Transport::book_charge(XYZPoint q) {
-  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   charges.push_back(q); // total charge list to be filled/drained in threads
   chargeStore.push_back(q); // permanent storage
   return;
@@ -256,26 +264,26 @@ void Transport::book_charge(XYZPoint q) {
 
 
 void Transport::book_photon(XYZPoint q) {
-  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   photonStore.push_back(q); // permanent storage
   return;
 }
 
 
 void Transport::addToGammas(int g) {
-  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   photon_number += g;
   return;
 }
 
 
 void Transport::addToIons(int i) {
-  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   ion_number += i;
   return;
 }
 
-void Transport::kin_factor(TRandom3& rnd, XYZVector& v0, bool momentum_flag)
+void Transport::kin_factor(XYZVector& v0, bool momentum_flag)
 {
   Polar3D<double> vel(v0);
   double theta0 = v0.Theta();
@@ -288,8 +296,8 @@ void Transport::kin_factor(TRandom3& rnd, XYZVector& v0, bool momentum_flag)
   double mumass_eV = 1.0e9 * e_mass * argon_mass / (e_mass + argon_mass);
   
   energy = 0.5 * mumass_eV * v0.Mag2() / c2; // non-rel. energy in [eV]
-  double azimuth = TMath::TwoPi()*rnd.Rndm();
-  double theta = pm.angle_function(rnd, energy);
+  double azimuth = TMath::TwoPi()*rnd(generator);
+  double theta = pm->angle_function(energy);
   double phi = 0.5*TMath::ASin((argon_mass)/(argon_mass+ e_mass) * TMath::Sin(theta));
   transfer = TMath::Sqrt((1.0 - reduced_mass * TMath::Cos(phi)*TMath::Cos(phi)));
   

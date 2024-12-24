@@ -3,13 +3,11 @@
 
 #include <vector>
 #include <string>
+#include <mutex>
 
 // ROOT includes
 #include "TKDTree.h"
 #include "Math/Point3D.h"
-
-//local
-#include "geomodel.hh"
 
 using namespace ROOT::Math;
 
@@ -20,6 +18,8 @@ class ComsolFields {
  private:
   // scaling the weighting field for two electrodes
   double bias;
+
+  std::mutex mtx;
 
   // which ROOT file to read the weighting field
   std::vector<XYZPoint> coords;

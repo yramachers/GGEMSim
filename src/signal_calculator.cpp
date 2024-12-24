@@ -17,7 +17,6 @@
 #include "TFile.h"
 #include "TNtuple.h"
 #include "TParameter.h"
-#include "TRandom3.h"
 
 
 int main(int argc, char** argv) {
@@ -47,7 +46,6 @@ int main(int argc, char** argv) {
   CLI11_PARSE(app, argc, argv);
 
   //run the code
-  TRandom3 rnd(seed); // one global rnd
   XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
   std::list<XYZPoint> hits;
   hits.push_front(loc); // let's have the one
@@ -69,13 +67,13 @@ int main(int argc, char** argv) {
   
   //----------------------------------------------------------
   // Transport
-  Transport transportation;
+  Transport transportation(seed);
 
   //----------------------------------------------------------
   // transport start
   //----------------------------------------------------------
 
-  int attempts = transportation.transport(gmodel, field, rnd, hits, en);
+  int attempts = transportation.transport(gmodel, field, hits, en);
 
   //  std::cout << "attempt: " << attempts << " from 1000" << std::endl;
   std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;

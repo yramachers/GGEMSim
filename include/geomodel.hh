@@ -1,12 +1,10 @@
 #ifndef GEOMODEL_HH
 #define GEOMODEL_HH
 
-#include <vector>
 #include <string>
 
 // ROOT includes
 #include "TGeoManager.h"
-#include "TGeoNode.h"
 
 // local
 

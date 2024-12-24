@@ -3,12 +3,10 @@
 
 #include <array>
 #include <random>
-// #include <mutex>
+#include <mutex>
 
 // ROOT
-#include "TRandom3.h"
-#include "TF1.h"
-#include "TGraph.h"
+#include "TGraph.h" // for interpolation
 
 using namespace ROOT::Math;
 
@@ -29,25 +27,26 @@ private:
   std::array<double,6> calc_phaseshift1to6(double energy);
 
   // data members
-  TF1* inel;
   TGraph* data0;
   TGraph* data1;
   TGraph* data2;
   TGraph* data3;
 
+  std::mutex mtx;
   std::ranlux24      generator;
-  std::random_device rd;
+  std::unform_real_distribution<double> rnd(0.0, 1.0);
+
   
 public:
   // Constructor
-  Physics_Model();
+  Physics_Model(int seed);
   
   // Destructor
   ~Physics_Model();
 
   // interface
-  double cross_section(TRandom3& rnd, double energy, bool &momentum_flag, int &inel_flag);
-  double angle_function(TRandom3& rnd, double energy);
+  double cross_section(double energy, bool &momentum_flag, int &inel_flag);
+  double angle_function(double energy);
 
 };
 

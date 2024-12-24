@@ -100,8 +100,11 @@ void Fields::prepare_fields(ComsolFields& fem) {
 }
 
 
-XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic) {
-
+XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic)
+{
+  // thread access protection
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  
   // common routine to ask for field value
   // bool drift decides between Drift field: drift=True
   // or weighting field values: drift=False
@@ -112,14 +115,14 @@ XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic) {
   double zv = p.z();
   double rad = TMath::Sqrt(xv*xv+yv*yv); // x-y-plane
   double angle = TMath::ATan2(yv,xv); // x-y-plane
-  int value = gm.whereami(xv,yv,zv);
-  //  std::cout << "in Fields::answer to whereami: " << value << std::endl;
+
+  int value = gm.whereami(xv,yv,zv); // single access point to geomodel
   XYZPoint triplet;
   
   if (value==1) { // comsol region
     double point[2];
-    double dist[4]; // check on nearest 4 neighbours in grid
-    int indx[4];
+    double dist[5]; // check on nearest 5 neighbours in grid
+    int indx[5];
     
     XYZVector fieldvec;
     XYZVector sumvec;
@@ -131,8 +134,8 @@ XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic) {
 
     //    std::cout << "in Fields: point coordinates " << xv << " " << yv << " " << zv << std::endl;
         
-    coordinates->FindNearestNeighbors(point,4,indx,dist);
-    for (int j=0;j<4;j++) {
+    coordinates->FindNearestNeighbors(point,5,indx,dist);
+    for (int j=0;j<5;j++) {
       fieldvec.SetXYZ(alldx[indx[j]], 0.0, alldz[indx[j]]);
       // 	std::cout << "in Fields: nearest coords: " << allx[indx[j]] << " " << ally[indx[j]] << " " << allz[indx[j]] << std::endl;
       // 	std::cout << "in Fields: Drift field value: " << alldx[indx[j]] << " " << alldy[indx[j]] << " " << alldz[indx[j]] << std::endl;
@@ -141,10 +144,10 @@ XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic) {
     }
 
     double denom = 0.0;
-    for (int j=0;j<4;j++) denom += (1.0-dist[j]/dsum);
+    for (int j=0;j<5;j++) denom += (1.0-dist[j]/dsum);
     
     sumvec.SetXYZ(0.,0.,0.);
-    for (int j=0;j<4;j++) {
+    for (int j=0;j<5;j++) {
       fieldvec = nnvec.at(j)*((1.0-dist[j]/dsum)/denom);
       sumvec += fieldvec;
     }

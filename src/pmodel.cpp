@@ -1,15 +1,8 @@
 #include "pmodel.hh"
 
-// ROOT includes
-#include "TMath.h"
-
-Physics_Model::Physics_Model() {
-  generator.seed(rd()); // use random seed
+Physics_Model::Physics_Model(int seed) {
+  generator.seed(seed); // use random seed
   
-  // local declarations
-  double inelsum(double* x, double* par);
-  inel  = new TF1("inelsum",inelsum,11.55,50.0,4);
-
   // phaseshift calculation, set interpolator data
   data0 = new TGraph(11);
   data1 = new TGraph(11);
@@ -31,7 +24,6 @@ Physics_Model::Physics_Model() {
 
 
 Physics_Model::~Physics_Model() {
-  delete inel;
   delete data0;
   delete data1;
   delete data2;
@@ -42,13 +34,14 @@ Physics_Model::~Physics_Model() {
 //****************************
 // theory from JPhysB16,4023
 //****************************
-double Physics_Model::angle_function(TRandom3& rnd, double energy)
+double Physics_Model::angle_function(double energy)
 {
   using pld_type = std::piecewise_linear_distribution<double>;
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
 
-  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   if (energy <= 0.02) // trial correction
-    return TMath::Pi()*rnd.Rndm();//isotropic for <0.02 eV
+    return TMath::Pi()*rnd(generator);//isotropic for <0.02 eV
+
   double p[5];
   double phaseshift[4];
   find_phaseshift(energy,phaseshift);
@@ -75,7 +68,7 @@ void Physics_Model::find_phaseshift(double e, double* phaseshift)
 
 
 // check new cross sections better than Eachran, Stauffer (1983)
-double Physics_Model::cross_section(TRandom3& rnd, double energy, bool &momentum_flag, int &inel_flag)
+double Physics_Model::cross_section(double energy, bool &momentum_flag, int &inel_flag)
 {
   double cs_el, cs_inel,ratio;
   double cs_etrans;
@@ -94,7 +87,7 @@ double Physics_Model::cross_section(TRandom3& rnd, double energy, bool &momentum
       cs_ptrans *= 0.73;
       cs_etrans *= 0.73;
     }
-    if (rnd.Rndm() <  ratio) momentum_flag = kTRUE;
+    if (rnd(generator) <  ratio) momentum_flag = kTRUE;
     else momentum_flag = kFALSE; // energy transfer cs
     return (momentum_flag ? cs_ptrans : cs_etrans);
   }
@@ -104,7 +97,7 @@ double Physics_Model::cross_section(TRandom3& rnd, double energy, bool &momentum
     cs_el = stauffer_elastic_cs(energy);
     cs_inel = inelastic_cs(energy);
     ratio = cs_inel / (cs_el+cs_inel);
-    if (rnd.Rndm() < ratio) {
+    if (rnd(generator) < ratio) {
       inel_flag = -1; // photon
       if (energy > 15.76) inel_flag = 1; // electron
       //      std::cout << " inelastic sigma = " << cs_inel << " ratio = " << ratio << std::endl;
@@ -112,7 +105,7 @@ double Physics_Model::cross_section(TRandom3& rnd, double energy, bool &momentum
     }
     // elastic as normal
     ratio = cs_ptrans / cs_el;
-    if (rnd.Rndm() <  ratio) momentum_flag = kTRUE;
+    if (rnd(generator) <  ratio) momentum_flag = kTRUE;
     else momentum_flag = kFALSE; // energy transfer cs
     return (momentum_flag ? cs_ptrans+cs_inel : cs_el+cs_inel);
   }
@@ -218,7 +211,7 @@ double Physics_Model::func_b(int l)
 
 double Physics_Model::inelastic_cs(double energy)
 {
-  //  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
   int flag;
 
   double bins[6] = {11.55,11.62,11.72,11.83,14.0,15.76};
@@ -234,19 +227,18 @@ double Physics_Model::inelastic_cs(double energy)
   double par[4], result = 0.0;
 
   for (int j=1;j<flag;j++) { // all previous
-  	par[0] = array[j-1][0];
-  	par[1] = array[j-1][1];
-	par[2] = array[j-1][2];
-	par[3] = array[j-1][3];
-	inel->SetParameters(par);
-	result += inel->Eval(bins[j]-1.0e-3);
+    par[0] = array[j-1][0];
+    par[1] = array[j-1][1];
+    par[2] = array[j-1][2];
+    par[3] = array[j-1][3];
+    result += inelsum(bins[j]-1.0e-3, par);
   }
   par[0] = array[flag-1][0]; // + actual
   par[1] = array[flag-1][1];
   par[2] = array[flag-1][2];
   par[3] = array[flag-1][3];
-  inel->SetParameters(par);
-  result += inel->Eval(energy);
+
+  result += inelsum(energy, par);
   // unit conversion pi*Bohr radius^2 to SI
   result *= 8.797356696e-21;
   result += inelastic_cs_mason_newell(energy); // excitation + ionization
@@ -254,9 +246,9 @@ double Physics_Model::inelastic_cs(double energy)
   return result;        
 }
 
-double inelsum(double* x, double* par)
+double Physics_Model::inelsum(double x, double* par)
 {
-    double result = par[0] + par[1]*x[0] + par[2]*x[0]*x[0] + par[3]*x[0]*x[0]*x[0];
+    double result = par[0] + par[1]*x + par[2]*x*x + par[3]*x*x*x;
     return result;
 }
 

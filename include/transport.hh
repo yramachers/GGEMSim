@@ -3,15 +3,14 @@
 
 #include <list>
 #include <vector>
-// #include <mutex>
+#include <random>
+#include <mutex>
 
 // ROOT
-#include "TRandom3.h"
 #include "Math/Point3D.h"
 #include "Math/Vector3D.h"
 
 //local
-#include "geomodel.hh"
 #include "fields.hh"
 #include "pmodel.hh"
 
@@ -30,34 +29,37 @@ class Transport {
   std::list<XYZPoint> charges;
   std::vector<XYZPoint> chargeStore;
   std::vector<XYZPoint> photonStore;
-  //  std::mutex mtx;
-  //  TRandom3* rnd;
-  Physics_Model pm;
+  std::mutex mtx;
+
+  std::mt19937 generator;
+  std::uniform_real_distribution<double> rnd;
+
+  Physics_Model* pm;
+  Fields* fd;
   
   // used by task function
   void book_charge(XYZPoint q);
   void book_photon(XYZPoint q);
   void addToGammas(int g);
   void addToIons(int i);
-  void kin_factor(TRandom3& rnd, XYZVector& v0, bool momentum_flag);
+  void kin_factor(XYZVector& v0, bool momentum_flag);
 
 
  protected:
-  bool run(GeometryModel& gm, Fields& fd, TRandom3& rnd, double en, int nthr);
-  bool taskfunction(GeometryModel& gm, Fields& fd, TRandom3& rnd, XYZPoint q, double en);
+  bool taskfunction(XYZPoint q, double en);
 
  public:
   // Constructor
-  Transport();
+  Transport(Fields* f, int seed);
   
   // Default destructor
-  ~Transport() = default;
+  ~Transport();
 
   // Methods
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(GeometryModel& gm, Fields& fd, TRandom3& rnd, std::list<XYZPoint>& q, double energy); 
+  int transport(std::list<XYZPoint>& q, double energy); 
 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}

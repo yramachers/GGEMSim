@@ -1,5 +1,5 @@
 // *********************************
-// THGEM: transport through hole
+// GGEM: transport through holes
 //**********************************
 
 #include <vector>
@@ -22,8 +22,8 @@
 int main(int argc, char** argv) {
 
   // command line interface
-  CLI::App app{"thgem signal calculator"};
-  int    seed = 1234;
+  CLI::App app{"ggem signal calculator"};
+  int    seed = 12345;
   double en = 0.2; // [eV]
   double bias = 600.0; // [V]
   double xs = 0.06; // [cm]
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   app.add_option("-z,--zstart", zs, "<z start position [cm]> Default: 0.151");
   app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
   app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.2");
-  app.add_option("-s,--seed", seed, "<random seed integer> Default: 1234");
+  app.add_option("-s,--seed", seed, "<random seed integer> Default: 12345");
   app.add_option("-o,--outfile", outputFileName, "<output file name> Default: avalanche.root");
   app.add_option("-g,--gdmlfile", gdmlName, "<gdml file name> Default: DGGEM_5_2_5.gdml");
   app.add_option("-f,--fieldfile", fieldName, "<field file name> Default: 2DGGEM_5_2_5-1V.root");
@@ -73,9 +73,9 @@ int main(int argc, char** argv) {
   // transport start
   //----------------------------------------------------------
 
-  int attempts = transportation.transport(hits, en);
+  int anode_count = transportation.transport(hits, en);
 
-  //  std::cout << "attempt: " << attempts << " from 1000" << std::endl;
+  std::cout << "anode count arrivals: " << anode_count << std::endl;
   std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;
   std::cout << "Total ionization electrons counted: " << transportation.getIons() << std::endl;
 

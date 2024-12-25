@@ -105,7 +105,7 @@ void Fields::prepare_fields(ComsolFields& fem) {
 }
 
 
-XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic)
+XYZPoint Fields::getFieldValue(XYZPoint& p, int& gv, bool& analytic)
 {
   // thread access protection
   std::lock_guard<std::mutex> lck (mtx); // protect thread access
@@ -123,8 +123,14 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic)
 
   int value = gm->whereami(xv,yv,zv); // single access point to geomodel
   XYZPoint triplet;
-  
-  if (value==1) { // comsol region
+
+  if (value==2) {
+    gv = 2; // anode encoding
+    triplet.SetXYZ(-1.0,0.0,0.0);
+    analytic = true; // trigger to stop
+  }
+  else if (value==1) { // comsol region
+    gv = 1; // drift region code
     double point[2];
     double dist[5]; // check on nearest 5 neighbours in grid
     int indx[5];
@@ -164,6 +170,7 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic)
   }
   else {
     // outside anything relevant, stop transport.
+    gv = 0;
     triplet.SetXYZ(-1.0,0.0,0.0);
     analytic = true; // trigger to stop
   }

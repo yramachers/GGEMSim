@@ -21,6 +21,7 @@ Transport::Transport(Fields* f,int seed) :
 {
   photon_number = 0;
   ion_number = 0;
+  anode_number = 0;
   density = 1.6903; // [kg/m^3] fix NTP (295K) argon gas density
   charges.clear();
   chargeStore.clear();
@@ -41,7 +42,7 @@ int Transport::transport(std::list<XYZPoint>& q, double energy) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
-    return false;
+    return 0;
   }
 
   unsigned int nthreads = std::thread::hardware_concurrency();
@@ -57,8 +58,6 @@ int Transport::transport(std::list<XYZPoint>& q, double energy) {
   thread_pool* pool = new thread_pool(nthreads); // task pool
 
   XYZPoint eloc;
-  int counter = 0;
-
   while (!charges.empty()) { // stop when refilling stopped
 
     // empty charges and store tasks in blocks of nthreads
@@ -66,7 +65,6 @@ int Transport::transport(std::list<XYZPoint>& q, double energy) {
       eloc = charges.front(); // get front element of std::list
       results.push_back(pool->async(std::function<bool(XYZPoint, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2)), eloc, energy)); // tasks
       charges.pop_front(); // remove first charge from list
-      counter++; // counts tasks launched
     }
 
     // drain task pool
@@ -77,10 +75,9 @@ int Transport::transport(std::list<XYZPoint>& q, double energy) {
     results.clear();
   }
 
-  //  std::cout << "from threads, total task counter = " << counter << std::endl;
   // charge loop finished
   delete pool;
-  return counter;
+  return anode_number; // e- on anode from starter population
 }
 
 
@@ -110,7 +107,6 @@ bool Transport::taskfunction(XYZPoint point, double en) {
   int inel_flag = 0;
   int photon_counter = 0;
   int ion_counter = 0;
-  //  int check = 0;
   
   distance_step.SetXYZ(0.0,0.0,0.0);
   speed.SetXYZ(0.0,0.0,0.0);
@@ -134,16 +130,15 @@ bool Transport::taskfunction(XYZPoint point, double en) {
   speed.SetZ(speed_start*TMath::Sin(tangle));
   
   time_sum = running_time = 0.0;
-
+  int geovol = 0; // geometry volume encoding
   bool analytic = false; // default False
 
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
-  exyz = fd->getFieldValue(point,analytic); // [V/m]
+  exyz = fd->getFieldValue(point,geovol,analytic); // [V/m]
 
   // transport loop
   while (!analytic) { 
-    //    check++;
     // prepare and update
     time_step = -tau * TMath::Log(rnd(generator));
     // free-flight time
@@ -161,10 +156,6 @@ bool Transport::taskfunction(XYZPoint point, double en) {
     csection = pm->cross_section(energy, momentum_flag, inel_flag); // local storage
     kv = speed.R() * csection;
     
-    // if (check%10000)
-    //   std::cout << " while loop mod 10000 with kv = " << kv << " speed.R " << speed.R() << " cs=" <<
-    // 		cross_section(energy,momentum_flag,inel_flag) << std::endl;
-
     if (inel_flag>0) { // was ionization
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
       kv = 0.0;
@@ -207,18 +198,20 @@ bool Transport::taskfunction(XYZPoint point, double en) {
       kin_factor(speed, momentum_flag);
       
       // check geometry and fields
-      exyz = fd->getFieldValue(point,analytic);
+      exyz = fd->getFieldValue(point,geovol,analytic);
       // std::cout << "analytic bool " << analytic << std::endl;
       // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "collision at energy " << energy << std::endl;
       //      std::cout << "speed X: " << speed.X() << " Z: " << speed.Z() << std::endl;
       // std::cout << "time between coll " << running_time << std::endl;
-
+      if (geovol>1) // e- stopped, now count
+	addAnode(); // as hit on anode
+      
       // reset system
       running_time = 0.0;
     }
-    if (time_sum>=5.0e-7) { // particle got stuck
+    if (time_sum>=1.0e-7) { // particle got stuck
       analytic = true; // Stop
       std::cout << "STUCK: time = " << time_sum << std::endl;
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
@@ -257,6 +250,12 @@ void Transport::addToGammas(int g) {
 void Transport::addToIons(int i) {
   std::lock_guard<std::mutex> lck (mtx); // protect thread access
   ion_number += i;
+  return;
+}
+
+void Transport::addAnode() {
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  anode_number++;
   return;
 }
 

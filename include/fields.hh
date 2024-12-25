@@ -72,6 +72,6 @@ class Fields {
   void prepare_fields(ComsolFields& fem);
 
   // return field values in [V/m]
-  XYZPoint getFieldValue(XYZPoint& p, bool& analytic);  
+  XYZPoint getFieldValue(XYZPoint& p, int& gv, bool& analytic);  
 };
 #endif

@@ -9,6 +9,9 @@
 #include "TKDTree.h"
 #include "Math/Point3D.h"
 
+// us
+#include "geomodel.hh"
+
 using namespace ROOT::Math;
 
 //***********************************
@@ -45,6 +48,9 @@ class ComsolFields {
 
 class Fields {
  private:
+  // access to geometry
+  GeometryModel* gm;
+  
   // container for field coordinates here
   TKDTreeID* coordinates;
 
@@ -58,7 +64,7 @@ class Fields {
 
  public:
   // Constructor
-  Fields() = default; // from file
+  Fields(GeometryModel* g); // from file
   
   // Default destructor
   ~Fields();
@@ -67,6 +73,6 @@ class Fields {
   void prepare_fields(ComsolFields& fem);
 
   // return field values in [V/m]
-  XYZPoint getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic);  
+  XYZPoint getFieldValue(XYZPoint& p, bool& analytic);  
 };
 #endif

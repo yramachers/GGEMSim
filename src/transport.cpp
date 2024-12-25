@@ -35,7 +35,7 @@ Transport::~Transport() {
 
 
 // calculate a signal on electrode for any charges in region of interest
-int Transport::transport(GeometryModel& gm, Fields& fd, std::list<XYZPoint>& q, double energy) {
+int Transport::transport(Fields& fd, std::list<XYZPoint>& q, double energy) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
@@ -44,7 +44,6 @@ int Transport::transport(GeometryModel& gm, Fields& fd, std::list<XYZPoint>& q, 
 
   unsigned int nthreads = std::thread::hardware_concurrency();
   if (nthreads>4) nthreads = 4; // limit max CPU number
-  int nthreads = 1;
 
   // got all charges as initial input
   charges.clear(); // copy to data member
@@ -52,20 +51,38 @@ int Transport::transport(GeometryModel& gm, Fields& fd, std::list<XYZPoint>& q, 
     charges.push_front(cc); // insert from front
   }
   
+  std::vector<std::future<bool> > results; 
+  thread_pool* pool = new thread_pool(nthr); // task pool
+
+  XYZPoint eloc;
   int counter = 0;
-  while (!run(gm, fd, energy, nthreads) && counter<5) { // runs first charge
-  // next attempt with initial charge
-    charges.clear();
-    for (XYZPoint cc : q) {
-      charges.push_front(cc); // insert from front
+
+  while (!charges.empty()) { // stop when refilling stopped
+
+    // empty charges and store tasks in blocks of nthreads
+    for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
+      eloc = charges.front(); // get front element of std::list
+      results.push_back(pool->async(std::function<bool(Fields&, XYZPoint, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), fd, eloc, en)); // tasks
+      charges.pop_front(); // remove first charge from list
+      counter++; // counts tasks launched
     }
-    counter++;
+
+    // drain task pool
+    for (std::future<bool>& status : results) 
+      status.get(); // wait for completion before the next round
+
+    // all tasks from pool finished - clear it. Next batch of charges in pool.
+    results.clear();
   }
-  return counter+1;
+
+  //  std::cout << "from threads, total task counter = " << counter << std::endl;
+  // charge loop finished
+  delete pool;
+  return counter;
 }
 
 
-bool Transport::taskfunction(GeometryModel& gm, Fields& fd, XYZPoint point, double en) {
+bool Transport::taskfunction(Fields& fd, XYZPoint point, double en) {
   // have a charge and info about all fields for each thread
 
   //Init, local storage
@@ -119,7 +136,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, XYZPoint point, doub
 
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
-  exyz = fd.getFieldValue(gm,point,analytic); // [V/m]
+  exyz = fd.getFieldValue(point,analytic); // [V/m]
 
   // transport loop
   while (!analytic) { 
@@ -178,7 +195,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, XYZPoint point, doub
     // collision decision
     if (prob <= (kv/kmax)) {
 
-      // book position of collision
+      // set position of collision
       distance_step = speed * running_time;
       distance_sum += distance_step; // in [m]
       point.SetXYZ(distance_sum.x()*100.0,distance_sum.y()*100.0,distance_sum.z()*100.0); // [cm]
@@ -187,7 +204,7 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, XYZPoint point, doub
       kin_factor(speed, momentum_flag);
       
       // check geometry and fields
-      exyz = fd.getFieldValue(gm,point,analytic);
+      exyz = fd.getFieldValue(point,analytic);
       // std::cout << "analytic bool " << analytic << std::endl;
       // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
@@ -209,49 +226,6 @@ bool Transport::taskfunction(GeometryModel& gm, Fields& fd, XYZPoint point, doub
   addToGammas(photon_counter);
   addToIons(ion_counter);
   return true;
-}
-
-bool Transport::run(GeometryModel& gm, Fields& fd, double en, int nthr) {
-  std::vector<std::future<bool> > results; 
-  thread_pool* pool = new thread_pool(nthr); // task pool
-
-  XYZPoint q;
-  int counter = 0;
-
-  while (!charges.empty()) { // stop when refilling stopped
-    q = charges.front(); // get front element of std::list
-    taskfunction(gm, fd, q, en);
-    charges.pop_front(); // remove first charge from list
-    counter++; // counts tasks/electrons launched
-
-    //    std::cout << "from threads, charge basket size = " << charges.size() << std::endl;
-
-    // empty charges and store tasks in blocks of nthreads
-    for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
-      q = charges.front(); // get front element of std::list
-      results.push_back(pool->async(std::function<bool(Electrode*, charge_t, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), electrode, q, en)); // tasks
-      charges.pop_front(); // remove first charge from list
-      counter++; // counts tasks/electrons launched
-    }
-
-      //    std::future<bool> status = pool.async(std::function<bool(Electrode*, charge_t)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2)), electrode, q); // tasks in pool
-    // drain task pool
-    for (std::future<bool>& status : results) 
-      status.get(); // wait for completion before the next round
-    
-      //	counter++; // counts tasks launched
-    //    }
-    // all tasks from pool finished - clear it. Next batch of charges in pool.
-    results.clear();
-  }
-
-  //  std::cout << "from threads, total task counter = " << counter << std::endl;
-  // charge loop finished
-  delete pool;
-  if (getPhotons()>0 || counter>1)
-    return true;
-  else
-    return false;
 }
 
 

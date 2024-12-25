@@ -11,7 +11,6 @@
 #include "Math/Vector3D.h"
 
 //local
-#include "geomodel.hh"
 #include "fields.hh"
 #include "pmodel.hh"
 
@@ -47,8 +46,7 @@ class Transport {
 
 
  protected:
-  bool run(GeometryModel& gm, Fields& fd, double en, int nthr);
-  bool taskfunction(GeometryModel& gm, Fields& fd, XYZPoint q, double en);
+  bool taskfunction(Fields& fd, XYZPoint q, double en);
 
  public:
   // Constructor
@@ -61,7 +59,7 @@ class Transport {
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(GeometryModel& gm, Fields& fd, std::list<XYZPoint>& q, double energy); 
+  int transport(Fields& fd, std::list<XYZPoint>& q, double energy); 
 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}

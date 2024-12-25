@@ -54,6 +54,11 @@ void ComsolFields::clear()
 
 
 // Fields class
+Fields:: Fields(GeometryModel* g) :
+  gm(g) // copy pointer
+{}
+
+
 Fields::~Fields() {
   if (allx) { // all set together
     delete [] allx ;
@@ -100,7 +105,7 @@ void Fields::prepare_fields(ComsolFields& fem) {
 }
 
 
-XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic)
+XYZPoint Fields::getFieldValue(XYZPoint& p, bool& analytic)
 {
   // thread access protection
   std::lock_guard<std::mutex> lck (mtx); // protect thread access
@@ -116,7 +121,7 @@ XYZPoint Fields::getFieldValue(GeometryModel& gm, XYZPoint& p, bool& analytic)
   double rad = TMath::Sqrt(xv*xv+yv*yv); // x-y-plane
   double angle = TMath::ATan2(yv,xv); // x-y-plane
 
-  int value = gm.whereami(xv,yv,zv); // single access point to geomodel
+  int value = gm->whereami(xv,yv,zv); // single access point to geomodel
   XYZPoint triplet;
   
   if (value==1) { // comsol region

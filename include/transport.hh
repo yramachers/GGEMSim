@@ -25,6 +25,7 @@ class Transport {
  private:
   int photon_number;
   int ion_number;
+  int anode_number;
   double density;
   std::list<XYZPoint> charges;
   std::vector<XYZPoint> chargeStore;
@@ -38,6 +39,7 @@ class Transport {
   Fields* fd;
   
   // used by task function
+  void addAnode();
   void book_charge(XYZPoint q);
   void book_photon(XYZPoint q);
   void addToGammas(int g);

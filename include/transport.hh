@@ -32,8 +32,7 @@ class Transport {
   std::mutex mtx;
 
   std::mt19937 generator;
-  std::uniform_real_distribution<double> rnd(0.0, 1.0);
-  std::uniform_real_distribution<double> rndHalf(0.01, 0.49);  
+  std::uniform_real_distribution<double> rnd;
 
   Physics_Model* pm;
  
@@ -46,7 +45,7 @@ class Transport {
 
 
  protected:
-  bool taskfunction(Fields& fd, XYZPoint q, double en);
+  bool taskfunction(Fields& fd, XYZPoint& q, double& en);
 
  public:
   // Constructor

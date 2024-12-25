@@ -1,8 +1,5 @@
 #include "pmodel.hh"
 
-// ROOT includes
-#include "TMath.h"
-
 Physics_Model::Physics_Model(int seed) {
   generator.seed(seed); // use random seed
   
@@ -251,7 +248,7 @@ double Physics_Model::inelastic_cs(double energy)
 
 double Physics_Model::inelsum(double x, double* par)
 {
-    double result = par[0] + par[1]*x[0] + par[2]*x[0]*x[0] + par[3]*x[0]*x[0]*x[0];
+    double result = par[0] + par[1]*x + par[2]*x*x + par[3]*x*x*x;
     return result;
 }
 

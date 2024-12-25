@@ -52,7 +52,7 @@ int Transport::transport(Fields& fd, std::list<XYZPoint>& q, double energy) {
   }
   
   std::vector<std::future<bool> > results; 
-  thread_pool* pool = new thread_pool(nthr); // task pool
+  thread_pool* pool = new thread_pool(nthreads); // task pool
 
   XYZPoint eloc;
   int counter = 0;
@@ -60,9 +60,9 @@ int Transport::transport(Fields& fd, std::list<XYZPoint>& q, double energy) {
   while (!charges.empty()) { // stop when refilling stopped
 
     // empty charges and store tasks in blocks of nthreads
-    for (int n=0;n<nthr && !charges.empty();n++) { // drain charges basket
+    for (int n=0;n<nthreads && !charges.empty();n++) { // drain charges basket
       eloc = charges.front(); // get front element of std::list
-      results.push_back(pool->async(std::function<bool(Fields&, XYZPoint, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), fd, eloc, en)); // tasks
+      results.push_back(pool->async(std::function<bool(Fields&, XYZPoint&, double&)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), fd, eloc, energy)); // tasks
       charges.pop_front(); // remove first charge from list
       counter++; // counts tasks launched
     }
@@ -82,7 +82,7 @@ int Transport::transport(Fields& fd, std::list<XYZPoint>& q, double energy) {
 }
 
 
-bool Transport::taskfunction(Fields& fd, XYZPoint point, double en) {
+bool Transport::taskfunction(Fields& fd, XYZPoint& point, double& en) {
   // have a charge and info about all fields for each thread
 
   //Init, local storage
@@ -112,6 +112,7 @@ bool Transport::taskfunction(Fields& fd, XYZPoint point, double en) {
   
   distance_step.SetXYZ(0.0,0.0,0.0);
   speed.SetXYZ(0.0,0.0,0.0);
+  std::uniform_real_distribution<double> rndHalf(0.01, 0.49);  
   
   double e_mass = 0.511e-3; // [GeV/c^2]
   double argon_mass = 39.948*1.0735; // [GeV/c^2]

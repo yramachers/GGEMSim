@@ -22,8 +22,6 @@ class ComsolFields {
   // scaling the weighting field for two electrodes
   double bias;
 
-  std::mutex mtx;
-
   // which ROOT file to read the weighting field
   std::vector<XYZPoint> coords;
   std::vector<XYZPoint> dmap;
@@ -50,6 +48,7 @@ class Fields {
  private:
   // access to geometry
   GeometryModel* gm;
+  std::mutex mtx;
   
   // container for field coordinates here
   TKDTreeID* coordinates;

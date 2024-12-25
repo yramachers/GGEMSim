@@ -6,9 +6,8 @@
 #include <mutex>
 
 // ROOT
+#include "TMath.h"
 #include "TGraph.h" // for interpolation
-
-using namespace ROOT::Math;
 
 // Physics Model
 // cross section calculation
@@ -23,6 +22,7 @@ private:
   double func_b(int l);
   double inelastic_cs(double energy);
   double inelastic_cs_mason_newell(double energy);
+  double inelsum(double x, double* par);
   double emp_fit(double x, double* par);
   std::array<double,6> calc_phaseshift1to6(double energy);
 
@@ -34,7 +34,7 @@ private:
 
   std::mutex mtx;
   std::ranlux24      generator;
-  std::unform_real_distribution<double> rnd(0.0, 1.0);
+  std::uniform_real_distribution<double> rnd;
 
   
 public:

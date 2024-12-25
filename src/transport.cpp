@@ -16,7 +16,9 @@
 //*******
 // Transport
 //*******
-Transport::Transport(int seed) {
+Transport::Transport(Fields* f,int seed) :
+  fd(f) // pointer copy
+{
   photon_number = 0;
   ion_number = 0;
   density = 1.6903; // [kg/m^3] fix NTP (295K) argon gas density
@@ -35,7 +37,7 @@ Transport::~Transport() {
 
 
 // calculate a signal on electrode for any charges in region of interest
-int Transport::transport(Fields& fd, std::list<XYZPoint>& q, double energy) {
+int Transport::transport(std::list<XYZPoint>& q, double energy) {
 
   if (q.size()<1) {
     std::cout << "Error: container of charges is empty" << std::endl;
@@ -62,7 +64,7 @@ int Transport::transport(Fields& fd, std::list<XYZPoint>& q, double energy) {
     // empty charges and store tasks in blocks of nthreads
     for (int n=0;n<nthreads && !charges.empty();n++) { // drain charges basket
       eloc = charges.front(); // get front element of std::list
-      results.push_back(pool->async(std::function<bool(Fields&, XYZPoint&, double&)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)), fd, eloc, energy)); // tasks
+      results.push_back(pool->async(std::function<bool(XYZPoint, double)>(std::bind(&Transport::taskfunction, this, std::placeholders::_1, std::placeholders::_2)), eloc, energy)); // tasks
       charges.pop_front(); // remove first charge from list
       counter++; // counts tasks launched
     }
@@ -82,7 +84,7 @@ int Transport::transport(Fields& fd, std::list<XYZPoint>& q, double energy) {
 }
 
 
-bool Transport::taskfunction(Fields& fd, XYZPoint& point, double& en) {
+bool Transport::taskfunction(XYZPoint point, double en) {
   // have a charge and info about all fields for each thread
 
   //Init, local storage
@@ -137,7 +139,7 @@ bool Transport::taskfunction(Fields& fd, XYZPoint& point, double& en) {
 
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
-  exyz = fd.getFieldValue(point,analytic); // [V/m]
+  exyz = fd->getFieldValue(point,analytic); // [V/m]
 
   // transport loop
   while (!analytic) { 
@@ -205,7 +207,7 @@ bool Transport::taskfunction(Fields& fd, XYZPoint& point, double& en) {
       kin_factor(speed, momentum_flag);
       
       // check geometry and fields
-      exyz = fd.getFieldValue(point,analytic);
+      exyz = fd->getFieldValue(point,analytic);
       // std::cout << "analytic bool " << analytic << std::endl;
       // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;

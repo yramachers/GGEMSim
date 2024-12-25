@@ -62,18 +62,18 @@ int main(int argc, char** argv) {
   fem.setBias(bias); // set first
   fem.read_fields(fieldName); /// then read and prepare
 
-  Fields field;
+  Fields field(&gmodel);
   field.prepare_fields(fem); // clears fem vectors at end
   
   //----------------------------------------------------------
   // Transport
-  Transport transportation(seed);
+  Transport transportation(&field, seed);
 
   //----------------------------------------------------------
   // transport start
   //----------------------------------------------------------
 
-  int attempts = transportation.transport(gmodel, field, hits, en);
+  int attempts = transportation.transport(hits, en);
 
   //  std::cout << "attempt: " << attempts << " from 1000" << std::endl;
   std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;

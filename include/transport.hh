@@ -35,7 +35,8 @@ class Transport {
   std::uniform_real_distribution<double> rnd;
 
   Physics_Model* pm;
- 
+  Fields* fd;
+  
   // used by task function
   void book_charge(XYZPoint q);
   void book_photon(XYZPoint q);
@@ -45,11 +46,11 @@ class Transport {
 
 
  protected:
-  bool taskfunction(Fields& fd, XYZPoint& q, double& en);
+  bool taskfunction(XYZPoint q, double en);
 
  public:
   // Constructor
-  Transport(int seed);
+  Transport(Fields* f, int seed);
   
   // Default destructor
   ~Transport();
@@ -58,7 +59,7 @@ class Transport {
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(Fields& fd, std::list<XYZPoint>& q, double energy); 
+  int transport(std::list<XYZPoint>& q, double energy); 
 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}

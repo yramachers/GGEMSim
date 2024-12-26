@@ -22,7 +22,7 @@
 int main(int argc, char** argv) {
 
   // command line interface
-  CLI::App app{"ggem signal calculator"};
+  CLI::App app{"ggem single charge transport"};
   int    seed = 12345;
   double en = 0.2; // [eV]
   double bias = 600.0; // [V]
@@ -57,7 +57,6 @@ int main(int argc, char** argv) {
   
   //----------------------------------------------------------
   // FEM fields from file
-  // hard-coded field map files
   ComsolFields fem;
   fem.setBias(bias); // set first
   fem.read_fields(fieldName); /// then read and prepare
@@ -73,7 +72,7 @@ int main(int argc, char** argv) {
   // transport start
   //----------------------------------------------------------
 
-  int anode_count = transportation.transport(hits, en);
+  int anode_count = transportation.single_transport(hits, en);
 
   std::cout << "anode count arrivals: " << anode_count << std::endl;
   std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;

@@ -71,5 +71,6 @@ class Transport {
   void setDensity(double d) {density = d;};
   std::vector<XYZPoint> allphotons() {return photonStore;}
   std::vector<XYZPoint> allcharges() {return chargeStore;}
+  inline void clear_counters() {photon_number=ion_number=anode_number=0;}
 };
 #endif

@@ -15,7 +15,7 @@
 
 // ROOT
 #include "TFile.h"
-#include "TNtuple.h"
+#include "TNtupleD.h"
 #include "TParameter.h"
 
 
@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
   // command line interface
   CLI::App app{"ggem multi charge scan"};
   int    seed = 12345;
+  int    nsims = 1;
   double en = 0.2; // [eV]
   double bias = 600.0; // [V]
   double xs = 0.06; // [cm]
@@ -39,6 +40,7 @@ int main(int argc, char** argv) {
   app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
   app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.2");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 12345");
+  app.add_option("-n,--nsims", nsims, "<number of simulations> Default: 1");
   app.add_option("-o,--outfile", outputFileName, "<output file name> Default: avalanche.root");
   app.add_option("-g,--gdmlfile", gdmlName, "<gdml file name> Default: DGGEM_5_2_5.gdml");
   app.add_option("-f,--fieldfile", fieldName, "<field file name> Default: 2DGGEM_5_2_5-1V.root");
@@ -46,9 +48,7 @@ int main(int argc, char** argv) {
   CLI11_PARSE(app, argc, argv);
 
   // set up charge population
-  XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
   std::list<XYZPoint> hits;
-  hits.push_front(loc); // let's have the one
 
   //----------------------------------------------------------
   // Geometry
@@ -69,39 +69,29 @@ int main(int argc, char** argv) {
   Transport transportation(&field, seed);
 
   //----------------------------------------------------------
-  // transport start
+  // transport loop
   //----------------------------------------------------------
-  int anode_count = transportation.multi_transport(hits, en);
+  XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
 
-  std::cout << "anode count arrivals: " << anode_count << std::endl;
-  std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;
-  std::cout << "Total ionization electrons counted: " << transportation.getIons() << std::endl;
-
-  //----------------------------------------------------------
-  // to storage
-  //----------------------------------------------------------
   // metainfo
   TParameter<double> bpar("bias",bias);
-  TParameter<double> epar("initenergy",en);
   // file
   TFile ff(outputFileName.data(),"RECREATE");
-  TNtuple* ntcharge = new TNtuple("charge","Ionization charge locations","cx:cy:cz");
-  //  TNtuple* ntgamma = new TNtuple("gamma","photon locations","px:py:pz");
-  std::vector<XYZPoint> ac = transportation.allcharges();
-  std::vector<XYZPoint> ap = transportation.allphotons();
-  for (unsigned int i=0;i<ac.size();i++)
-    ntcharge->Fill(ac.at(i).x(),ac.at(i).y(),ac.at(i).z());
-  // for (unsigned int i=0;i<ap.size();i++)
-  //   ntgamma->Fill(ap.at(i).x(),ap.at(i).y(),ap.at(i).z());
+  TNtupleD* ntcharge = new TNtupleD("charge","charge counters","x,y,z,energy,nions,nanode");
 
   // store metainfo in both ntuples
   ntcharge->GetUserInfo()->Add(&bpar);
-  ntcharge->GetUserInfo()->Add(&epar);
-  //  ntgamma->GetUserInfo()->Add(&bpar);
-  //  ntgamma->GetUserInfo()->Add(&epar);
+  // Add loops over locations and energies
+  for (int count;count<nsims;++count) { // statistics loop
+    hits.push_front(loc); // let's have the one
+
+    int anode_count = transportation.multi_transport(hits, en);
+    ntcharge->Fill(xs,ys,zs,en,transportation.getIons(),anode_count);
+    hits.clear();
+    transportation.clear_counters();
+  }
 
   ntcharge->Write();
-  //  ntgamma->Write();
   ff.Close();
 
   return 0;

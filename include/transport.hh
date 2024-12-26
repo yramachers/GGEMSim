@@ -48,7 +48,8 @@ class Transport {
 
 
  protected:
-  bool taskfunction(XYZPoint q, double en);
+  bool singletask(XYZPoint q, double en);
+  bool multitask(XYZPoint q, double en);
 
  public:
   // Constructor
@@ -61,7 +62,8 @@ class Transport {
   // preparation, required input from main()
   // otherwise no transport possible
   // work on this electrode id with charges
-  int transport(std::list<XYZPoint>& q, double energy); 
+  int single_transport(std::list<XYZPoint>& q, double energy); 
+  int multi_transport(std::list<XYZPoint>& q, double energy); 
 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}

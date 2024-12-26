@@ -22,7 +22,7 @@
 int main(int argc, char** argv) {
 
   // command line interface
-  CLI::App app{"ggem single charge transport"};
+  CLI::App app{"ggem multi charge scan"};
   int    seed = 12345;
   double en = 0.2; // [eV]
   double bias = 600.0; // [V]
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
   CLI11_PARSE(app, argc, argv);
 
-  //run the code
+  // set up charge population
   XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
   std::list<XYZPoint> hits;
   hits.push_front(loc); // let's have the one
@@ -71,8 +71,7 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------
   // transport start
   //----------------------------------------------------------
-
-  int anode_count = transportation.single_transport(hits, en);
+  int anode_count = transportation.multi_transport(hits, en);
 
   std::cout << "anode count arrivals: " << anode_count << std::endl;
   std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;
@@ -82,36 +81,27 @@ int main(int argc, char** argv) {
   // to storage
   //----------------------------------------------------------
   // metainfo
-  TParameter<double> xpar("xstart",loc.x());
-  TParameter<double> ypar("ystart",loc.y());
-  TParameter<double> zpar("zstart",loc.z());
   TParameter<double> bpar("bias",bias);
   TParameter<double> epar("initenergy",en);
   // file
   TFile ff(outputFileName.data(),"RECREATE");
   TNtuple* ntcharge = new TNtuple("charge","Ionization charge locations","cx:cy:cz");
-  TNtuple* ntgamma = new TNtuple("gamma","photon locations","px:py:pz");
+  //  TNtuple* ntgamma = new TNtuple("gamma","photon locations","px:py:pz");
   std::vector<XYZPoint> ac = transportation.allcharges();
   std::vector<XYZPoint> ap = transportation.allphotons();
   for (unsigned int i=0;i<ac.size();i++)
     ntcharge->Fill(ac.at(i).x(),ac.at(i).y(),ac.at(i).z());
-  for (unsigned int i=0;i<ap.size();i++)
-    ntgamma->Fill(ap.at(i).x(),ap.at(i).y(),ap.at(i).z());
+  // for (unsigned int i=0;i<ap.size();i++)
+  //   ntgamma->Fill(ap.at(i).x(),ap.at(i).y(),ap.at(i).z());
 
   // store metainfo in both ntuples
-  ntcharge->GetUserInfo()->Add(&xpar);
-  ntcharge->GetUserInfo()->Add(&ypar);
-  ntcharge->GetUserInfo()->Add(&zpar);
   ntcharge->GetUserInfo()->Add(&bpar);
   ntcharge->GetUserInfo()->Add(&epar);
-  ntgamma->GetUserInfo()->Add(&xpar);
-  ntgamma->GetUserInfo()->Add(&ypar);
-  ntgamma->GetUserInfo()->Add(&zpar);
-  ntgamma->GetUserInfo()->Add(&bpar);
-  ntgamma->GetUserInfo()->Add(&epar);
+  //  ntgamma->GetUserInfo()->Add(&bpar);
+  //  ntgamma->GetUserInfo()->Add(&epar);
 
   ntcharge->Write();
-  ntgamma->Write();
+  //  ntgamma->Write();
   ff.Close();
 
   return 0;

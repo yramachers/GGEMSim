@@ -207,7 +207,7 @@ bool Transport::singletask(XYZPoint point, double en) {
       	analytic = true; // Stop
       }
       else { // produce an electron
-	book_charge(point); // store in object container
+	book_charge(point,true); // store charge and location
 	ion_counter++;
 	// std::cout << "inelastic collision electron booked at energy " << energy << std::endl;
 	// std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
@@ -261,7 +261,7 @@ bool Transport::singletask(XYZPoint point, double en) {
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
       std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
-    if (point.z()>=0.4) { // particle escapes holes, z > 3xhole diameter
+    if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
       analytic = true; // Stop
       std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
       std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
@@ -357,6 +357,7 @@ bool Transport::multitask(XYZPoint point, double en) {
       	analytic = true; // Stop
       }
       else { // produce an electron
+	book_charge(point,false); // store charge, not location
 	ion_counter++;
 	// std::cout << "inelastic collision electron booked at energy " << energy << std::endl;
 	// std::cout << "last field values " << exyz.x() << " "<< exyz.y() << " " << exyz.z() << std::endl;
@@ -409,7 +410,7 @@ bool Transport::multitask(XYZPoint point, double en) {
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
       std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
-    if (point.z()>=0.4) { // particle escapes holes, z > 3xhole diameter
+    if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
       analytic = true; // Stop
       std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
       std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
@@ -422,10 +423,10 @@ bool Transport::multitask(XYZPoint point, double en) {
 }
 
 
-void Transport::book_charge(XYZPoint q) {
+void Transport::book_charge(XYZPoint q, bool flag) {
   std::lock_guard<std::mutex> lck (mtx); // protect thread access
   charges.push_back(q); // total charge list to be filled/drained in threads
-  chargeStore.push_back(q); // permanent storage
+  if (flag) chargeStore.push_back(q); // permanent storage
   return;
 }
 

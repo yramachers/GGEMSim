@@ -40,7 +40,7 @@ class Transport {
   
   // used by task functions
   void addAnode();
-  void book_charge(XYZPoint q);
+  void book_charge(XYZPoint q, bool flag);
   void book_photon(XYZPoint q);
   void addToGammas(int g);
   void addToIons(int i);

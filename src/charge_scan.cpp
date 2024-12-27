@@ -77,16 +77,16 @@ int main(int argc, char** argv) {
   TParameter<double> bpar("bias",bias);
   // file
   TFile ff(outputFileName.data(),"RECREATE");
-  TNtupleD* ntcharge = new TNtupleD("charge","charge counters","x,y,z,energy,nions,nanode");
+  TNtupleD* ntcharge = new TNtupleD("charge","charge counters","x,y,z,energy,nions,nphot,nanode");
 
-  // store metainfo in both ntuples
+  // store metainfo in ntuple
   ntcharge->GetUserInfo()->Add(&bpar);
   // Add loops over locations and energies
   for (int count;count<nsims;++count) { // statistics loop
     hits.push_front(loc); // let's have the one
 
     int anode_count = transportation.multi_transport(hits, en);
-    ntcharge->Fill(xs,ys,zs,en,transportation.getIons(),anode_count);
+    ntcharge->Fill(xs,ys,zs,en,transportation.getIons(),transportation.getPhotons(),anode_count);
     hits.clear();
     transportation.clear_counters();
   }

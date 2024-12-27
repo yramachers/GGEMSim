@@ -15,7 +15,7 @@
 
 // ROOT
 #include "TFile.h"
-#include "TNtuple.h"
+#include "TNtupleD.h"
 #include "TParameter.h"
 
 
@@ -89,8 +89,8 @@ int main(int argc, char** argv) {
   TParameter<double> epar("initenergy",en);
   // file
   TFile ff(outputFileName.data(),"RECREATE");
-  TNtuple* ntcharge = new TNtuple("charge","Ionization charge locations","cx:cy:cz");
-  TNtuple* ntgamma = new TNtuple("gamma","photon locations","px:py:pz");
+  TNtupleD* ntcharge = new TNtupleD("charge","Ionization charge locations","cx:cy:cz");
+  TNtupleD* ntgamma = new TNtupleD("gamma","photon locations","px:py:pz");
   std::vector<XYZPoint> ac = transportation.allcharges();
   std::vector<XYZPoint> ap = transportation.allphotons();
   for (unsigned int i=0;i<ac.size();i++)

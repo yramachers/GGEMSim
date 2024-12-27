@@ -40,7 +40,7 @@ int GeometryModel::whereami(double xv, double yv, double zv) {
   TGeoNode* nd = geom->FindNode();
   TGeoVolume* vol = nd->GetVolume();
   
-  TString region(vol->GetName()); // changed from GetNumber()
+  TString region(vol->GetName());
   //  std::cout << "Geometry model: region = " << region << std::endl;
   //  std::cout << "Geometry model: coords: " << xv << " " << yv << " " << zv << std::endl;
 

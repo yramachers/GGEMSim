@@ -17,7 +17,7 @@
 using namespace ROOT::Math;
 
 //***********************************
-// Charge signal class
+// Transport class
 // to be used as an interface
 // to the algorithm.
 //***********************************
@@ -38,7 +38,7 @@ class Transport {
   Physics_Model* pm;
   Fields* fd;
   
-  // used by task function
+  // used by task functions
   void addAnode();
   void book_charge(XYZPoint q);
   void book_photon(XYZPoint q);
@@ -59,9 +59,6 @@ class Transport {
   ~Transport();
 
   // Methods
-  // preparation, required input from main()
-  // otherwise no transport possible
-  // work on this electrode id with charges
   int single_transport(std::list<XYZPoint>& q, double energy); 
   int multi_transport(std::list<XYZPoint>& q, double energy); 
 

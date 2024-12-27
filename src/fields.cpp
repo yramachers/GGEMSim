@@ -10,7 +10,7 @@
 #include "Math/Vector3D.h"
 
 
-// come now as 2D data in x,y from comsol
+// as 2D data in x,y from comsol
 void ComsolFields::read_fields(std::string fn) {
   coords.clear();
   dmap.clear();
@@ -72,7 +72,6 @@ Fields::~Fields() {
 void Fields::prepare_fields(ComsolFields& fem) {
   std::vector<XYZPoint> cdata = fem.positions();
   int nentries = cdata.size();
-  //  std::cout << "in Fields::prepare fields." << std::endl;
 
   coordinates = new TKDTreeID(nentries,2,1);
   
@@ -80,20 +79,17 @@ void Fields::prepare_fields(ComsolFields& fem) {
   allz = new double [nentries];
 
   for (int i=0;i<nentries;i++){
-    // no transf needed, requests come as vectors
     allx[i] = cdata[i].x();
     allz[i] = cdata[i].z();
   }
   coordinates->SetData(0,allx);
   coordinates->SetData(1,allz);
   coordinates->Build();
-  //  std::cout << "in Fields::KDTree built." << std::endl;
   // KDTree built, all in memory
 
   alldx = new double [nentries];
   alldz = new double [nentries];
 
-  // no scaling if Comsol fields are at 500V/cm
   std::vector<XYZPoint> ddata = fem.driftmap();
   for (int i=0;i<nentries;i++){
     alldx[i] = ddata[i].x();
@@ -110,10 +106,6 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, int& gv, bool& analytic)
   // thread access protection
   std::lock_guard<std::mutex> lck (mtx); // protect thread access
   
-  // common routine to ask for field value
-  // bool drift decides between Drift field: drift=True
-  // or weighting field values: drift=False
-
   // ask the geometry
   double xv = p.x();
   double yv = p.y();
@@ -143,13 +135,9 @@ XYZPoint Fields::getFieldValue(XYZPoint& p, int& gv, bool& analytic)
     point[0] = rad;  // relative to origin x
     point[1] = zv;  // relative to z-axis origin
 
-    //    std::cout << "in Fields: point coordinates " << xv << " " << yv << " " << zv << std::endl;
-        
     coordinates->FindNearestNeighbors(point,5,indx,dist);
     for (int j=0;j<5;j++) {
       fieldvec.SetXYZ(alldx[indx[j]], 0.0, alldz[indx[j]]);
-      // 	std::cout << "in Fields: nearest coords: " << allx[indx[j]] << " " << ally[indx[j]] << " " << allz[indx[j]] << std::endl;
-      // 	std::cout << "in Fields: Drift field value: " << alldx[indx[j]] << " " << alldy[indx[j]] << " " << alldz[indx[j]] << std::endl;
       nnvec.push_back(fieldvec);
       dsum += dist[j];
     }

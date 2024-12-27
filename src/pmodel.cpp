@@ -1,7 +1,7 @@
 #include "pmodel.hh"
 
 Physics_Model::Physics_Model(int seed) {
-  generator.seed(seed); // use random seed
+  generator.seed(seed);
   
   // phaseshift calculation, set interpolator data
   data0 = new TGraph(11);

@@ -17,7 +17,7 @@
 using namespace ROOT::Math;
 
 //***********************************
-// Charge signal class
+// Transport class
 // to be used as an interface
 // to the algorithm.
 //***********************************
@@ -38,9 +38,9 @@ class Transport {
   Physics_Model* pm;
   Fields* fd;
   
-  // used by task function
+  // used by task functions
   void addAnode();
-  void book_charge(XYZPoint q);
+  void book_charge(XYZPoint q, bool flag);
   void book_photon(XYZPoint q);
   void addToGammas(int g);
   void addToIons(int i);
@@ -48,7 +48,8 @@ class Transport {
 
 
  protected:
-  bool taskfunction(XYZPoint q, double en);
+  bool singletask(XYZPoint q, double en);
+  bool multitask(XYZPoint q, double en);
 
  public:
   // Constructor
@@ -58,10 +59,8 @@ class Transport {
   ~Transport();
 
   // Methods
-  // preparation, required input from main()
-  // otherwise no transport possible
-  // work on this electrode id with charges
-  int transport(std::list<XYZPoint>& q, double energy); 
+  int single_transport(std::list<XYZPoint>& q, double energy); 
+  int multi_transport(std::list<XYZPoint>& q, double energy); 
 
   int getPhotons() {return photon_number;}
   int getIons() {return ion_number;}
@@ -69,5 +68,6 @@ class Transport {
   void setDensity(double d) {density = d;};
   std::vector<XYZPoint> allphotons() {return photonStore;}
   std::vector<XYZPoint> allcharges() {return chargeStore;}
+  inline void clear_counters() {photon_number=ion_number=anode_number=0;}
 };
 #endif

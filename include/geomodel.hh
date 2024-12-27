@@ -6,12 +6,8 @@
 // ROOT includes
 #include "TGeoManager.h"
 
-// local
-
 //***********************************
-// Charge signal class
-// to be used as an interface
-// to the algorithm.
+// Geometry class
 //***********************************
 class GeometryModel {
  private:
@@ -23,14 +19,13 @@ class GeometryModel {
  public:
 
   // Constructor
-  // from file: geometry
   GeometryModel() = default; 
   
   // Default destructor
   ~GeometryModel();
 
   // Methods
-  void init(std::string fn);
+  void init(std::string fn); // read GDML file
   int whereami(double xv, double yv, double zv); // int coding of regions
 };
 #endif

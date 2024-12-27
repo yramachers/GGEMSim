@@ -71,8 +71,6 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------
   // transport loop
   //----------------------------------------------------------
-  XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
-
   // metainfo
   TParameter<double> bpar("bias",bias);
   // file
@@ -82,18 +80,21 @@ int main(int argc, char** argv) {
   // store metainfo in ntuple
   ntcharge->GetUserInfo()->Add(&bpar);
   // Add loops over locations and energies
-  for (int i=0;i<3;++i) {
-    en += i*0.4; // step in 0.4 eV
+  for (int i=0;i<4;++i) {
+    double energy = en + i*0.3; // step in 0.3 eV
+    //    std::cout << "energy: " << energy << std::endl;
     for (int m=0;m<5;++m) {
-      loc.SetX(xs + m*0.01); // step 0.1 mm away from hole
-      for (int count;count<nsims;++count) { // statistics loop
-	hits.push_front(loc); // let's have the one
-	
-	int anode_count = transportation.multi_transport(hits, en);
-	ntcharge->Fill(xs,ys,zs,en,transportation.getIons(),transportation.getPhotons(),anode_count);
-	hits.clear();
+      double xstart = xs + m*0.01;
+      XYZPoint loc(xstart, ys, zs); // [cm] unit from root geometry
+      //      std::cout << "start x: " << loc.x() << std::endl;
+      hits.push_front(loc); // let's have the one
+      
+      for (int count=0;count<nsims;++count) { // statistics loop
+	int anode_count = transportation.multi_transport(hits, energy);
+	ntcharge->Fill(xstart,ys,zs,energy,transportation.getIons(),transportation.getPhotons(),anode_count);
 	transportation.clear_counters();
       }
+      hits.clear();
     }
   }
   ntcharge->Write();

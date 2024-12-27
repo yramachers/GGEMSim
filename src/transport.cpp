@@ -264,7 +264,7 @@ bool Transport::singletask(XYZPoint point, double en) {
     if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
       analytic = true; // Stop
       std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
-      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+      //      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
   }
   // one charge done, book counters to global
@@ -413,7 +413,7 @@ bool Transport::multitask(XYZPoint point, double en) {
     if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
       analytic = true; // Stop
       std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
-      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+      //      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
   }
   // one charge done, book counters to global

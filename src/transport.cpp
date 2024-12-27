@@ -261,6 +261,11 @@ bool Transport::singletask(XYZPoint point, double en) {
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
       std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
+    if (point.z()>=0.4) { // particle escapes holes, z > 3xhole diameter
+      analytic = true; // Stop
+      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
+      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+    }
   }
   // one charge done, book counters to global
   addToGammas(photon_counter);
@@ -403,6 +408,11 @@ bool Transport::multitask(XYZPoint point, double en) {
       std::cout << "STUCK: time = " << time_sum << std::endl;
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
       std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
+    }
+    if (point.z()>=0.4) { // particle escapes holes, z > 3xhole diameter
+      analytic = true; // Stop
+      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
+      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
   }
   // one charge done, book counters to global

@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
   TParameter<double> bpar("bias",bias);
   // file
   TFile ff(outputFileName.data(),"RECREATE");
-  TNtupleD* ntcharge = new TNtupleD("charge","charge counters","x,y,z,energy,nions,nphot,nanode");
+  TNtupleD* ntcharge = new TNtupleD("charge","charge counters","x:y:z:energy:nions:nphot:nanode");
 
   // store metainfo in ntuple
   ntcharge->GetUserInfo()->Add(&bpar);

@@ -25,20 +25,20 @@ int main(int argc, char** argv) {
   CLI::App app{"ggem multi charge scan"};
   int    seed = 12345;
   int    nsims = 1;
-  double en = 0.2; // [eV]
+  double en = 0.1; // [eV]
   double bias = 600.0; // [V]
-  double xs = 0.06; // [cm]
+  double xs = 0.041; // [cm] just right of hole
   double ys = 0.0;  // [cm]
-  double zs = 0.151; // [cm]
+  double zs = 0.151; // [cm], just above cathode
   std::string outputFileName = "avalanche.root";
   std::string gdmlName = "DGGEM_5_2_5.gdml";
   std::string fieldName = "2DGGEM_5_2_5-1V.root";
   
-  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.06");
+  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.041");
   app.add_option("-y,--ystart", ys, "<y start position [cm]> Default: 0.0");
   app.add_option("-z,--zstart", zs, "<z start position [cm]> Default: 0.151");
   app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
-  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.2");
+  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.1");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 12345");
   app.add_option("-n,--nsims", nsims, "<number of simulations> Default: 1");
   app.add_option("-o,--outfile", outputFileName, "<output file name> Default: avalanche.root");
@@ -82,15 +82,20 @@ int main(int argc, char** argv) {
   // store metainfo in ntuple
   ntcharge->GetUserInfo()->Add(&bpar);
   // Add loops over locations and energies
-  for (int count;count<nsims;++count) { // statistics loop
-    hits.push_front(loc); // let's have the one
-
-    int anode_count = transportation.multi_transport(hits, en);
-    ntcharge->Fill(xs,ys,zs,en,transportation.getIons(),transportation.getPhotons(),anode_count);
-    hits.clear();
-    transportation.clear_counters();
+  for (int i=0;i<3;++i) {
+    en += i*0.4; // step in 0.4 eV
+    for (int m=0;m<5;++m) {
+      loc.SetX(xs + m*0.01); // step 0.1 mm away from hole
+      for (int count;count<nsims;++count) { // statistics loop
+	hits.push_front(loc); // let's have the one
+	
+	int anode_count = transportation.multi_transport(hits, en);
+	ntcharge->Fill(xs,ys,zs,en,transportation.getIons(),transportation.getPhotons(),anode_count);
+	hits.clear();
+	transportation.clear_counters();
+      }
+    }
   }
-
   ntcharge->Write();
   ff.Close();
 

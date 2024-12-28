@@ -46,7 +46,9 @@ int Transport::multi_transport(std::list<XYZPoint>& q, double energy) {
   }
 
   unsigned int nthreads = std::thread::hardware_concurrency();
-  if (nthreads>4) nthreads = 4; // limit max CPU number
+
+  if (nthreads>=8) nthreads = 8; // on batch machine
+  else nthreads = 4; // on small machine
 
   // got all charges as initial input
   charges.clear(); // copy to data member

@@ -46,7 +46,8 @@ int Transport::multi_transport(std::list<XYZPoint>& q, double energy) {
   }
 
   unsigned int nthreads = std::thread::hardware_concurrency();
-  if (nthreads>4) nthreads = 4; // limit max CPU number
+  if (nthreads>=8) nthreads = 8; // on batch machine
+  else nthreads = 4 // on small machine
 
   // got all charges as initial input
   charges.clear(); // copy to data member
@@ -263,7 +264,7 @@ bool Transport::singletask(XYZPoint point, double en) {
     }
     if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
       analytic = true; // Stop
-      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
+      //      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
   }
@@ -412,7 +413,7 @@ bool Transport::multitask(XYZPoint point, double en) {
     }
     if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
       analytic = true; // Stop
-      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
+      //      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
   }

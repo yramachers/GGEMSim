@@ -245,7 +245,7 @@ bool Transport::singletask(XYZPoint point, double en) {
 
       // check: has passed z=0 half-way double GGEM geometry once
       if (!zero_latch && previousZ>=0.0 && distance_sum.z()<0.0) {
-	half_counter++;
+	addHalf();
 	zero_latch = true; // count passage only once
       }
       
@@ -402,7 +402,7 @@ bool Transport::multitask(XYZPoint point, double en) {
 
       // check: has passed z=0 half-way double GGEM geometry once
       if (!zero_latch && previousZ>=0.0 && distance_sum.z()<0.0) {
-	half_counter++;
+	addHalf();
 	zero_latch = true; // count passage only once
       }
       
@@ -474,6 +474,12 @@ void Transport::addToIons(int i) {
 void Transport::addAnode() {
   std::lock_guard<std::mutex> lck (mtx); // protect thread access
   anode_number++;
+  return;
+}
+
+void Transport::addHalf() {
+  std::lock_guard<std::mutex> lck (mtx); // protect thread access
+  half_counter++;
   return;
 }
 

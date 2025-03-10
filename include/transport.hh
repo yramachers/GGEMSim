@@ -23,7 +23,10 @@ using namespace ROOT::Math;
 //***********************************
 class Transport {
  private:
+  bool zero_latch;
+
   int photon_number;
+  int half_counter;
   int ion_number;
   int anode_number;
   double density;
@@ -63,11 +66,15 @@ class Transport {
   int multi_transport(std::list<XYZPoint>& q, double energy); 
 
   int getPhotons() {return photon_number;}
+  int getHalfCounter() {return half_counter;}
   int getIons() {return ion_number;}
   double getDensity() {return density;}
   void setDensity(double d) {density = d;};
   std::vector<XYZPoint> allphotons() {return photonStore;}
   std::vector<XYZPoint> allcharges() {return chargeStore;}
-  inline void clear_counters() {photon_number=ion_number=anode_number=0;}
+  inline void clear_counters() {
+    half_counter=photon_number=ion_number=anode_number=0;
+    zero_latch = false;
+  }
 };
 #endif

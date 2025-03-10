@@ -19,6 +19,8 @@
 Transport::Transport(Fields* f,int seed) :
   fd(f) // pointer copy
 {
+  zero_latch = false;
+  half_counter = 0;
   photon_number = 0;
   ion_number = 0;
   anode_number = 0;
@@ -143,6 +145,7 @@ bool Transport::singletask(XYZPoint point, double en) {
   double kv;
   double x, y, z;
   double xe, ye, ze;
+  double previousZ;
   double csection;
 
   // init constants
@@ -165,7 +168,6 @@ bool Transport::singletask(XYZPoint point, double en) {
   // for E=2.12e8, gives E/N = 10Td = 1.e-16 Vcm^2
   double kmax = 2.e-12; // constant for null coll. method
   double tau = 1/(localdensity * kmax);
-  bool stopflag = kFALSE; 
 
   // speed vector init/ positive z-direction
   init_energy = 1.e-9 * en; // [GeV] 
@@ -177,14 +179,15 @@ bool Transport::singletask(XYZPoint point, double en) {
   
   time_sum = running_time = 0.0;
   int geovol = 0; // geometry volume encoding
-  bool analytic = false; // default False
+  bool stopFlag = false; // default False
 
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
-  exyz = fd->getFieldValue(point,geovol,analytic); // [V/m]
+  previousZ = distance_sum.z(); // check for half-way counter in double GGEM
+  exyz = fd->getFieldValue(point,geovol,stopFlag); // [V/m]
 
   // transport loop
-  while (!analytic) { 
+  while (!stopFlag) { 
     // prepare and update
     time_step = -tau * TMath::Log(rnd(generator));
     // free-flight time
@@ -206,7 +209,7 @@ bool Transport::singletask(XYZPoint point, double en) {
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
       kv = 0.0;
       if (rnd(generator)<0.1) { // 10% recombination prob
-      	analytic = true; // Stop
+      	stopFlag = true; // Stop
       }
       else { // produce an electron
 	book_charge(point,true); // store charge and location
@@ -240,12 +243,18 @@ bool Transport::singletask(XYZPoint point, double en) {
       distance_sum += distance_step; // in [m]
       point.SetXYZ(distance_sum.x()*100.0,distance_sum.y()*100.0,distance_sum.z()*100.0); // [cm]
 
+      // check: has passed z=0 half-way double GGEM geometry once
+      if (!zero_latch && previousZ>=0.0 && distance_sum.z()<0.0) {
+	half_counter++;
+	zero_latch = true; // count passage only once
+      }
+      
       // new speed from elastic collision kinematics
       kin_factor(speed, momentum_flag);
       
       // check geometry and fields
-      exyz = fd->getFieldValue(point,geovol,analytic);
-      // std::cout << "analytic bool " << analytic << std::endl;
+      exyz = fd->getFieldValue(point,geovol,stopFlag);
+      // std::cout << "stopFlag bool " << stopFlag << std::endl;
       // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "collision at energy " << energy << std::endl;
@@ -256,15 +265,16 @@ bool Transport::singletask(XYZPoint point, double en) {
       
       // reset system
       running_time = 0.0;
+      previousZ = distance_sum.z(); // to new z coordinate
     }
     if (time_sum>=1.0e-7) { // particle got stuck
-      analytic = true; // Stop
+      stopFlag = true; // Stop
       std::cout << "STUCK: time = " << time_sum << std::endl;
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
       std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
     if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
-      analytic = true; // Stop
+      stopFlag = true; // Stop
       //      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
@@ -293,6 +303,7 @@ bool Transport::multitask(XYZPoint point, double en) {
   double kv;
   double x, y, z;
   double xe, ye, ze;
+  double previousZ;
   double csection;
 
   // init constants
@@ -315,7 +326,6 @@ bool Transport::multitask(XYZPoint point, double en) {
   // for E=2.12e8, gives E/N = 10Td = 1.e-16 Vcm^2
   double kmax = 2.e-12; // constant for null coll. method
   double tau = 1/(localdensity * kmax);
-  bool stopflag = kFALSE; 
 
   // speed vector init/ positive z-direction
   init_energy = 1.e-9 * en; // [GeV] 
@@ -327,14 +337,15 @@ bool Transport::multitask(XYZPoint point, double en) {
   
   time_sum = running_time = 0.0;
   int geovol = 0; // geometry volume encoding
-  bool analytic = false; // default False
+  bool stopFlag = false; // default False
 
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
-  exyz = fd->getFieldValue(point,geovol,analytic); // [V/m]
+  previousZ = distance_sum.z(); // check for half-way counter in double GGEM
+  exyz = fd->getFieldValue(point,geovol,stopFlag); // [V/m]
 
   // transport loop
-  while (!analytic) { 
+  while (!stopFlag) { 
     // prepare and update
     time_step = -tau * TMath::Log(rnd(generator));
     // free-flight time
@@ -356,7 +367,7 @@ bool Transport::multitask(XYZPoint point, double en) {
       speed.SetXYZ(0.0,0.0,-1.0); // inelastic takes energy off e-
       kv = 0.0;
       if (rnd(generator)<0.1) { // 10% recombination prob
-      	analytic = true; // Stop
+      	stopFlag = true; // Stop
       }
       else { // produce an electron
 	book_charge(point,false); // store charge, not location
@@ -389,12 +400,18 @@ bool Transport::multitask(XYZPoint point, double en) {
       distance_sum += distance_step; // in [m]
       point.SetXYZ(distance_sum.x()*100.0,distance_sum.y()*100.0,distance_sum.z()*100.0); // [cm]
 
+      // check: has passed z=0 half-way double GGEM geometry once
+      if (!zero_latch && previousZ>=0.0 && distance_sum.z()<0.0) {
+	half_counter++;
+	zero_latch = true; // count passage only once
+      }
+      
       // new speed from elastic collision kinematics
       kin_factor(speed, momentum_flag);
       
       // check geometry and fields
-      exyz = fd->getFieldValue(point,geovol,analytic);
-      // std::cout << "analytic bool " << analytic << std::endl;
+      exyz = fd->getFieldValue(point,geovol,stopFlag);
+      // std::cout << "stopFlag bool " << stopFlag << std::endl;
       // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "collision at energy " << energy << std::endl;
@@ -405,15 +422,16 @@ bool Transport::multitask(XYZPoint point, double en) {
       
       // reset system
       running_time = 0.0;
+      previousZ = distance_sum.z(); // to new z coordinate
     }
     if (time_sum>=1.0e-7) { // particle got stuck
-      analytic = true; // Stop
+      stopFlag = true; // Stop
       std::cout << "STUCK: time = " << time_sum << std::endl;
       std::cout << "STUCK: last x,z coordinates " << point.x() << " " << point.z() << std::endl;
       std::cout << "STUCK: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }
     if (point.z()>=0.5) { // particle escapes holes, z > 4xhole diameter
-      analytic = true; // Stop
+      stopFlag = true; // Stop
       //      std::cout << "ESCAPE: last x,z coordinates [cm] " << point.x() << " " << point.z() << std::endl;
       //      std::cout << "ESCAPE: last x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
     }

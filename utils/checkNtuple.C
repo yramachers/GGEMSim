@@ -17,3 +17,23 @@ void check(const char* fn) {
   }
   ff.Close();
 }
+
+void checkgains(const char* fn) {
+  TFile ff(fn, "READ");
+  TNtupleD* nt = (TNtupleD*)ff.Get("charge");
+  double xs =0.;
+  double energy = 0.;
+  double nanode = 0.;
+  double nions = 0.;
+  double nzeqzero = 0.;
+  nt->SetBranchAddress("x",&xs);
+  nt->SetBranchAddress("energy",&energy);
+  nt->SetBranchAddress("nanode",&nanode);
+  nt->SetBranchAddress("nions",&nions);
+  nt->SetBranchAddress("nzeqzero",&nzeqzero);
+  for (int i=0;i<nt->GetEntries();++i) {
+    nt->GetEntry(i);
+    std::cout << "x: " << xs << " en: " << energy  << " charges: " << nions << " zero crossings: " << nzeqzero << " on anode: " << nanode << std::endl;
+  }
+  ff.Close();
+}

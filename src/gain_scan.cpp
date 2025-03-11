@@ -75,28 +75,19 @@ int main(int argc, char** argv) {
   TParameter<double> bpar("bias",bias);
   // file
   TFile ff(outputFileName.data(),"RECREATE");
-  TNtupleD* ntcharge = new TNtupleD("charge","charge counters","x:y:z:energy:nions:nphot:nanode");
+  TNtupleD* ntcharge = new TNtupleD("charge","charge counters","x:y:z:energy:nions:nzeqzero:nanode");
 
   // store metainfo in ntuple
   ntcharge->GetUserInfo()->Add(&bpar);
-  // Add loops over locations and energies
-  for (int i=0;i<4;++i) {
-    double energy = en + i*0.3; // step in 0.3 eV
-    //    std::cout << "energy: " << energy << std::endl;
-    for (int m=0;m<5;++m) {
-      double xstart = xs + m*0.01;
-      XYZPoint loc(xstart, ys, zs); // [cm] unit from root geometry
-      //      std::cout << "start x: " << loc.x() << std::endl;
-      hits.push_front(loc); // let's have the one
+  XYZPoint loc(xs, ys, zs); // [cm] unit from root geometry
+  hits.push_front(loc); // let's have the one
       
-      for (int count=0;count<nsims;++count) { // statistics loop
-	int anode_count = transportation.multi_transport(hits, energy);
-	ntcharge->Fill(xstart,ys,zs,energy,transportation.getIons(),transportation.getPhotons(),anode_count);
-	transportation.clear_counters();
-      }
-      hits.clear();
-    }
+  for (int count=0;count<nsims;++count) { // statistics loop
+    int anode_count = transportation.multi_transport(hits, en);
+    ntcharge->Fill(xs,ys,zs,en,transportation.getIons(),transportation.getHalfCounter(),anode_count);
+    transportation.clear_counters();
   }
+
   ntcharge->Write();
   ff.Close();
 

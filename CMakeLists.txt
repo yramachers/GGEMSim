@@ -41,5 +41,8 @@ target_link_libraries(single_charge.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
 add_executable(charge_scan.exe src/charge_scan.cpp)
 target_link_libraries(charge_scan.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
 
+add_executable(gain_scan.exe src/gain_scan.cpp)
+target_link_libraries(gain_scan.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
+
 #add_executable(testCS.exe utils/testCS.cpp)
 #target_link_libraries(testCS.exe ${ROOT_LIBRARIES})

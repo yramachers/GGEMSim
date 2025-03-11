@@ -19,7 +19,6 @@
 Transport::Transport(Fields* f,int seed) :
   fd(f) // pointer copy
 {
-  zero_latch = false;
   half_counter = 0;
   photon_number = 0;
   ion_number = 0;
@@ -131,7 +130,7 @@ int Transport::single_transport(std::list<XYZPoint>& q, double energy) {
 
 bool Transport::singletask(XYZPoint point, double en) {
   // have a charge and info about all fields for each thread
-
+  bool zero_latch= false;
   //Init, local storage
   XYZVector speed;
   XYZVector distance_sum, distance_step;
@@ -289,6 +288,7 @@ bool Transport::singletask(XYZPoint point, double en) {
 bool Transport::multitask(XYZPoint point, double en) {
   // single difference: do not store interaction locations, just count.
   // have a charge and info about all fields for each thread
+  bool zero_latch= false;
 
   //Init, local storage
   XYZVector speed;

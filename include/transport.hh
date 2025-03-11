@@ -23,8 +23,6 @@ using namespace ROOT::Math;
 //***********************************
 class Transport {
  private:
-  bool zero_latch;
-
   int photon_number;
   int half_counter;
   int ion_number;
@@ -75,7 +73,6 @@ class Transport {
   std::vector<XYZPoint> allcharges() {return chargeStore;}
   inline void clear_counters() {
     half_counter=photon_number=ion_number=anode_number=0;
-    zero_latch = false;
   }
 };
 #endif

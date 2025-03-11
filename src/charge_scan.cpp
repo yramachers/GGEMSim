@@ -29,14 +29,14 @@ int main(int argc, char** argv) {
   double bias = 600.0; // [V]
   double xs = 0.041; // [cm] just right of hole
   double ys = 0.0;  // [cm]
-  double zs = 0.151; // [cm], just above cathode
+  double zs = 0.16; // [cm], just above cathode
   std::string outputFileName = "avalanche.root";
   std::string gdmlName = "DGGEM_5_2_5.gdml";
   std::string fieldName = "2DGGEM_5_2_5-1V.root";
   
   app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.041");
   app.add_option("-y,--ystart", ys, "<y start position [cm]> Default: 0.0");
-  app.add_option("-z,--zstart", zs, "<z start position [cm]> Default: 0.151");
+  app.add_option("-z,--zstart", zs, "<z start position [cm]> Default: 0.16");
   app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
   app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.1");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 12345");

@@ -24,20 +24,20 @@ int main(int argc, char** argv) {
   // command line interface
   CLI::App app{"ggem single charge transport"};
   int    seed = 12345;
-  double en = 0.2; // [eV]
+  double en = 0.1; // [eV]
   double bias = 600.0; // [V]
-  double xs = 0.06; // [cm]
+  double xs = 0.041; // [cm]
   double ys = 0.0;  // [cm]
-  double zs = 0.151; // [cm]
+  double zs = 0.16; // [cm]
   std::string outputFileName = "avalanche.root";
   std::string gdmlName = "DGGEM_5_2_5.gdml";
   std::string fieldName = "2DGGEM_5_2_5-1V.root";
   
-  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.06");
+  app.add_option("-x,--xstart", xs, "<x start position [cm]> Default: 0.041");
   app.add_option("-y,--ystart", ys, "<y start position [cm]> Default: 0.0");
-  app.add_option("-z,--zstart", zs, "<z start position [cm]> Default: 0.151");
+  app.add_option("-z,--zstart", zs, "<z start position [cm]> Default: 0.16");
   app.add_option("-b,--bias", bias, "<bias value [V]]> Default: 600.0");
-  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.2");
+  app.add_option("-e,--energy", en, "<initial energy [eV]> Default: 0.1");
   app.add_option("-s,--seed", seed, "<random seed integer> Default: 12345");
   app.add_option("-o,--outfile", outputFileName, "<output file name> Default: avalanche.root");
   app.add_option("-g,--gdmlfile", gdmlName, "<gdml file name> Default: DGGEM_5_2_5.gdml");
@@ -75,6 +75,7 @@ int main(int argc, char** argv) {
   int anode_count = transportation.single_transport(hits, en);
 
   std::cout << "anode count arrivals: " << anode_count << std::endl;
+  std::cout << "half-way counter double GGEM: " << transportation.getHalfCounter() << std::endl;
   std::cout << "Total excitation photons counted: " << transportation.getPhotons() << std::endl;
   std::cout << "Total ionization electrons counted: " << transportation.getIons() << std::endl;
 

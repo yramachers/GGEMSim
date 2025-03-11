@@ -15,4 +15,10 @@ starting point and stores all interaction points to file and returns the number 
 in the geometry, identified by GDML name.
 
 The charge_scan executable counts events of interest, and outputs them to file. That is meant to enable
-larger scale simulations.
+larger scale simulations. This scans, hard-coded, starting positions in steps of 0.1mm from the default start 
+in x and initial energies in steps of 0.3 eV from the default start kinetic energy, 20 iterations in total
+for each electron.
+
+Another executable, gain_scan, doesn't scan positions or energies other than the initial given values but 
+counts the number of charges passing the middle, z=0, of the double GGEM, in addition to the total number 
+of electrons arriving at the anode.

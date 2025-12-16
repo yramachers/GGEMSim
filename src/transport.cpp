@@ -33,6 +33,23 @@ Transport::Transport(Fields* f,int seed) :
 
 }
 
+Transport::Transport(Fields3D* f,int seed) :
+  fd3d(f) // pointer copy
+{
+  half_counter = 0;
+  photon_number = 0;
+  ion_number = 0;
+  anode_number = 0;
+  density = 1.6903; // [kg/m^3] fix NTP (295K) argon gas density
+  charges.clear();
+  chargeStore.clear();
+  photonStore.clear();
+
+  pm = new Physics_Model(seed+1); // seed+1 in pm
+  generator.seed(seed); // use given seed
+
+}
+
 Transport::~Transport() {
   delete pm;
 }
@@ -183,7 +200,10 @@ bool Transport::singletask(XYZPoint point, double en) {
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
   previousZ = distance_sum.z(); // check for half-way counter in double GGEM
-  exyz = fd->getFieldValue(point,geovol,stopFlag); // [V/m]
+  if (fd) // not nullptr
+    exyz = fd->getFieldValue(point,geovol,stopFlag); // [V/m]
+  else
+    exyz = fd3d->getFieldValue(point,geovol,stopFlag); // [V/m]
 
   // transport loop
   while (!stopFlag) { 
@@ -252,7 +272,11 @@ bool Transport::singletask(XYZPoint point, double en) {
       kin_factor(speed, momentum_flag);
       
       // check geometry and fields
-      exyz = fd->getFieldValue(point,geovol,stopFlag);
+      if (fd)
+	exyz = fd->getFieldValue(point,geovol,stopFlag);
+      else
+	exyz = fd3d->getFieldValue(point,geovol,stopFlag);
+
       // std::cout << "stopFlag bool " << stopFlag << std::endl;
       // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;
@@ -342,8 +366,11 @@ bool Transport::multitask(XYZPoint point, double en) {
   // starting XYZVector from point
   distance_sum.SetXYZ(point.x()*0.01,point.y()*0.01,point.z()*0.01); // [cm]->[m]
   previousZ = distance_sum.z(); // check for half-way counter in double GGEM
-  exyz = fd->getFieldValue(point,geovol,stopFlag); // [V/m]
-
+  if (fd)
+    exyz = fd->getFieldValue(point,geovol,stopFlag); // [V/m]
+  else
+    exyz = fd3d->getFieldValue(point,geovol,stopFlag); // [V/m]
+    
   // transport loop
   while (!stopFlag) { 
     // prepare and update
@@ -410,7 +437,11 @@ bool Transport::multitask(XYZPoint point, double en) {
       kin_factor(speed, momentum_flag);
       
       // check geometry and fields
-      exyz = fd->getFieldValue(point,geovol,stopFlag);
+      if (fd)
+	exyz = fd->getFieldValue(point,geovol,stopFlag);
+      else
+	exyz = fd3d->getFieldValue(point,geovol,stopFlag);
+	
       // std::cout << "stopFlag bool " << stopFlag << std::endl;
       // std::cout << "in transport: x,z field values " << exyz.x() << " " << exyz.z() << std::endl;
       // std::cout << "in transport: x,z coordinates " << point.x() << " " << point.z() << std::endl;

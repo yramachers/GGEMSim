@@ -38,6 +38,9 @@ target_link_libraries(thgem ${ROOT_LIBRARIES})
 add_executable(single_charge.exe src/single_charge.cpp)
 target_link_libraries(single_charge.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
 
+add_executable(single_charge3D.exe src/single_charge3D.cpp)
+target_link_libraries(single_charge3D.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
+
 add_executable(charge_scan.exe src/charge_scan.cpp)
 target_link_libraries(charge_scan.exe ${ROOT_LIBRARIES} thgem ROOT::Geom)
 

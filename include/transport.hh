@@ -38,6 +38,7 @@ class Transport {
 
   Physics_Model* pm;
   Fields* fd;
+  Fields3D* fd3d;
   
   // used by task functions
   void addAnode();
@@ -56,6 +57,7 @@ class Transport {
  public:
   // Constructor
   Transport(Fields* f, int seed);
+  Transport(Fields3D* f, int seed); // alternative
   
   // Default destructor
   ~Transport();

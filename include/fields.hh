@@ -73,4 +73,61 @@ class Fields {
   // return field values in [V/m]
   XYZPoint getFieldValue(XYZPoint& p, int& gv, bool& analytic);  
 };
+
+
+class ComsolFields3D {
+ private:
+  std::vector<XYZPoint> coords;
+  std::vector<XYZPoint> dmap;
+
+ protected:
+
+ public:
+  // Constructor
+  ComsolFields3D() = default; // from file
+  
+  // Default destructor
+  ~ComsolFields3D() = default;
+
+  // Methods
+  void read_fields(std::string fname);
+  void clear();
+  std::vector<XYZPoint> positions() {return coords;}
+  std::vector<XYZPoint> driftmap() {return dmap;}
+};
+
+
+class Fields3D {
+ private:
+  // access to geometry
+  GeometryModel* gm;
+  std::mutex mtx;
+  
+  // container for field coordinates here
+  TKDTreeID* coordinates;
+
+  // storage container
+  double* allx;
+  double* ally;
+  double* allz;
+  double* alldx;
+  double* alldy;
+  double* alldz;
+
+ protected:
+
+ public:
+  // Constructor
+  Fields3D(GeometryModel* g); // from file
+  
+  // Default destructor
+  ~Fields3D();
+
+  // Methods
+  void prepare_fields(ComsolFields3D& fem);
+
+  // return field values in [V/m]
+  XYZPoint getFieldValue(XYZPoint& p, int& gv, bool& analytic);  
+};
+
 #endif

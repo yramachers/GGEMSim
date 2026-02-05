@@ -17,7 +17,8 @@
 // Transport
 //*******
 Transport::Transport(Fields* f,int seed) :
-  fd(f) // pointer copy
+  fd(f), // pointer copy
+  fd3d(0)
 {
   half_counter = 0;
   photon_number = 0;
@@ -34,7 +35,8 @@ Transport::Transport(Fields* f,int seed) :
 }
 
 Transport::Transport(Fields3D* f,int seed) :
-  fd3d(f) // pointer copy
+  fd3d(f), // pointer copy
+  fd(0)
 {
   half_counter = 0;
   photon_number = 0;
